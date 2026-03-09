@@ -1,0 +1,93 @@
+# Requirements — AliExpress-SteuerGrabber
+
+## 1. Firefox Cookie Extraction — Browser Integration
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | Firefox profile / SQLite |
+| **Dependencies** | sqlite3, configparser, shutil, tempfile (stdlib) |
+| **Requirements** | - Auto-detect the default Firefox profile on Windows via `profiles.ini`. |
+|  | - Copy `cookies.sqlite` to a temp directory to avoid lock conflicts with the running Firefox process. |
+|  | - Extract all cookies matching `.aliexpress.com` domain. |
+|  | - Convert Firefox cookie fields (host, name, value, path, expiry, isSecure, isHttpOnly, sameSite) to Playwright-compatible format. |
+|  | - Abort with a clear error if no AliExpress cookies are found. |
+
+## 2. Order Scraping — Web Automation
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | Browser automation (Playwright Firefox) |
+| **Dependencies** | playwright |
+| **Requirements** | - Inject extracted Firefox cookies into a new Playwright Firefox context. |
+|  | - Navigate to AliExpress order list page. |
+|  | - Try API interception (network response listener) first; fall back to DOM scraping. |
+|  | - Handle pagination automatically (click "next" until no more pages). |
+|  | - Extract: order ID, date, item titles, total price (USD). |
+|  | - Visit order detail pages to enrich missing fields. |
+|  | - Handle multiple AliExpress date formats (Jan 15 2025, 2025-01-15, 15.01.2025, etc.). |
+
+## 3. Invoice PDF Download — File I/O
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | Browser automation / File I/O |
+| **Dependencies** | playwright |
+| **Requirements** | - Save invoice PDFs to `invoices/` directory with naming `<order_id>.pdf`. |
+|  | - Skip download if the PDF already exists (idempotent). |
+|  | - Try clicking invoice/receipt download button on the order detail page. |
+|  | - Fall back to saving the order detail page as PDF (`page.pdf()`). |
+|  | - Create the `invoices/` directory automatically if it does not exist. |
+
+## 4. EUR Conversion — ECB Exchange Rates
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | HTTP API (ECB XML feed) |
+| **Dependencies** | requests |
+| **Requirements** | - Fetch ECB historical USD/EUR daily reference rates from the XML feed. |
+|  | - Cache rates locally (`ecb_rates_cache.json`) for 24 hours. |
+|  | - For each order, find the ECB rate matching the order date. |
+|  | - If no rate exists for the exact date (weekend/holiday), use the nearest previous business day (up to 7 days back). |
+|  | - Convert USD→EUR and round **up** to the next full cent (`math.ceil(eur * 100) / 100`). |
+|  | - Return the rate used and the date it was from for traceability. |
+
+## 5. Order Categorization — Electronics Classification
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | N/A (string matching) |
+| **Dependencies** | N/A (stdlib only) |
+| **Requirements** | - Classify each order as "Electronics" or "Other" based on item title keywords. |
+|  | - Keyword list covers: passive components (resistor, capacitor, etc.), active components (IC, MCU, MOSFET), dev boards (Arduino, ESP32, STM32), test equipment (multimeter, oscilloscope), connectors, wiring, soldering supplies, 3D printing, CNC. |
+|  | - Match is case-insensitive against the concatenated item titles. |
+|  | - Any single keyword match classifies the entire order as "Electronics". |
+
+## 6. CSV Export & Summary Table — Output
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | File I/O / Console |
+| **Dependencies** | tabulate |
+| **Requirements** | - Print a formatted table to the console using `tabulate` (grid format). |
+|  | - Export to `orders_summary.csv` with semicolon delimiter (`;`). |
+|  | - Columns: Order ID, Date, Items (truncated to 80 chars), Category, Price (USD), Rate (USD/EUR), Rate Date, Price (EUR). |
+|  | - Print summary totals: Electronics total EUR, Other total EUR, Grand total EUR. |
+
+---
+
+## Traceability Matrix
+
+| Req # | Feature | Depends On |
+|---|---|---|
+| 1 | Firefox Cookie Extraction | — |
+| 2 | Order Scraping | 1 |
+| 3 | Invoice PDF Download | 2 |
+| 4 | EUR Conversion | — |
+| 5 | Order Categorization | 2 |
+| 6 | CSV Export & Summary Table | 2, 4, 5 |
