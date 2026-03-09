@@ -1,0 +1,7 @@
+.env
+invoices/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
