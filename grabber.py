@@ -110,8 +110,8 @@ ELECTRONICS_KEYWORDS = [
 ]
 
 # Keywords that indicate automotive / motorcycle / bicycle parts.
-# When present alongside an electronics keyword the item is re-classified
-# as "Other" because it is a vehicle part, not a standalone component.
+# When present alongside an electronics keyword the item is classified
+# as "Automotive" instead of "Electronics".
 AUTOMOTIVE_KEYWORDS = [
     # Vehicle types
     "motorcycle", "motorbike", "dirt bike", "pit bike",
@@ -132,6 +132,110 @@ AUTOMOTIVE_KEYWORDS = [
     "bmw", "moto guzzi", "buick", "cadillac",
     "lifan", "zongshen", "loncin",
 ]
+
+# Curated database of common electronic components for part identification.
+# Used instead of calling an external API (Octopart/Nexar require auth).
+PART_DATABASE = {
+    # Microcontrollers / SoCs
+    "ESP32": {"manufacturer": "Espressif", "description": "WiFi + Bluetooth SoC, dual-core Xtensa LX6"},
+    "ESP8266": {"manufacturer": "Espressif", "description": "WiFi SoC, single-core Tensilica L106"},
+    "STM32F103": {"manufacturer": "STMicroelectronics", "description": "ARM Cortex-M3 MCU, 72 MHz"},
+    "STM32F401": {"manufacturer": "STMicroelectronics", "description": "ARM Cortex-M4 MCU, 84 MHz"},
+    "STM32F407": {"manufacturer": "STMicroelectronics", "description": "ARM Cortex-M4 MCU, 168 MHz"},
+    "STM32F411": {"manufacturer": "STMicroelectronics", "description": "ARM Cortex-M4 MCU, 100 MHz"},
+    "STM32F429": {"manufacturer": "STMicroelectronics", "description": "ARM Cortex-M4 MCU, 180 MHz, LCD-TFT"},
+    "STM32F030": {"manufacturer": "STMicroelectronics", "description": "ARM Cortex-M0 MCU, 48 MHz"},
+    "ATMEGA328P": {"manufacturer": "Microchip", "description": "8-bit AVR MCU, 20 MHz (Arduino Uno)"},
+    "ATMEGA328": {"manufacturer": "Microchip", "description": "8-bit AVR MCU, 20 MHz"},
+    "ATMEGA2560": {"manufacturer": "Microchip", "description": "8-bit AVR MCU, 16 MHz (Arduino Mega)"},
+    "ATMEGA8": {"manufacturer": "Microchip", "description": "8-bit AVR MCU, 16 MHz"},
+    "ATMEGA128": {"manufacturer": "Microchip", "description": "8-bit AVR MCU, 16 MHz, 128 KB Flash"},
+    "ATTINY85": {"manufacturer": "Microchip", "description": "8-bit AVR MCU, 20 MHz, 8 KB Flash"},
+    "ATTINY13": {"manufacturer": "Microchip", "description": "8-bit AVR MCU, 20 MHz, 1 KB Flash"},
+    "PIC16F877": {"manufacturer": "Microchip", "description": "8-bit PIC MCU, 20 MHz"},
+    "RP2040": {"manufacturer": "Raspberry Pi", "description": "Dual-core ARM Cortex-M0+, 133 MHz"},
+    "CH340": {"manufacturer": "WCH", "description": "USB to UART bridge IC"},
+    "CH340G": {"manufacturer": "WCH", "description": "USB to UART bridge IC"},
+    "CH32V003": {"manufacturer": "WCH", "description": "RISC-V MCU, 48 MHz"},
+    # Discrete semiconductors
+    "1N4001": {"manufacturer": "Various", "description": "1A 50V rectifier diode, DO-41"},
+    "1N4004": {"manufacturer": "Various", "description": "1A 400V rectifier diode, DO-41"},
+    "1N4007": {"manufacturer": "Various", "description": "1A 1000V rectifier diode, DO-41"},
+    "1N4148": {"manufacturer": "Various", "description": "Small signal switching diode, DO-35"},
+    "1N5408": {"manufacturer": "Various", "description": "3A 1000V rectifier diode, DO-201"},
+    "1N5817": {"manufacturer": "Various", "description": "1A 20V Schottky diode, DO-41"},
+    "1N5822": {"manufacturer": "Various", "description": "3A 40V Schottky diode, DO-201"},
+    "2N2222": {"manufacturer": "Various", "description": "NPN general purpose transistor, TO-92"},
+    "2N7000": {"manufacturer": "Various", "description": "N-channel MOSFET, 60V 200mA, TO-92"},
+    "BC547": {"manufacturer": "Various", "description": "NPN general purpose transistor, TO-92"},
+    "IRFZ44N": {"manufacturer": "Various", "description": "N-channel MOSFET, 55V 49A, TO-220"},
+    "IRF540": {"manufacturer": "Various", "description": "N-channel MOSFET, 100V 33A, TO-220"},
+    # ICs
+    "NE555": {"manufacturer": "Texas Instruments", "description": "Precision timer IC, DIP-8"},
+    "NE555P": {"manufacturer": "Texas Instruments", "description": "Precision timer IC, DIP-8"},
+    "LM7805": {"manufacturer": "Various", "description": "5V 1A linear voltage regulator, TO-220"},
+    "LM317": {"manufacturer": "Various", "description": "Adjustable voltage regulator, 1.2-37V"},
+    "LM2596": {"manufacturer": "Texas Instruments", "description": "3A step-down voltage regulator"},
+    "LM393": {"manufacturer": "Various", "description": "Dual differential comparator, DIP-8"},
+    "ULN2003": {"manufacturer": "Various", "description": "7-channel Darlington transistor array"},
+    "74HC595": {"manufacturer": "Various", "description": "8-bit shift register, output latch"},
+    "74HC245": {"manufacturer": "Various", "description": "Octal bus transceiver, 3-state"},
+    # Sensors / modules
+    "MPU6050": {"manufacturer": "InvenSense", "description": "6-axis accelerometer + gyroscope, I2C"},
+    "BMP280": {"manufacturer": "Bosch", "description": "Barometric pressure + temperature sensor"},
+    "BME280": {"manufacturer": "Bosch", "description": "Pressure + humidity + temperature sensor"},
+    "DHT11": {"manufacturer": "Aosong", "description": "Temperature + humidity sensor, digital"},
+    "DHT22": {"manufacturer": "Aosong", "description": "Temperature + humidity sensor, digital"},
+    "ACS712": {"manufacturer": "Allegro", "description": "Hall-effect current sensor, ±5-30A"},
+    "DS18B20": {"manufacturer": "Maxim", "description": "1-Wire digital temperature sensor"},
+    "SSD1306": {"manufacturer": "Solomon Systech", "description": "128x64 OLED display driver, I2C/SPI"},
+    "ILI9341": {"manufacturer": "Ilitek", "description": "240x320 TFT LCD driver, SPI"},
+    "ST7735": {"manufacturer": "Sitronix", "description": "128x160 TFT LCD driver, SPI"},
+    "ST7789": {"manufacturer": "Sitronix", "description": "240x320/240 TFT LCD driver, SPI"},
+    "PCF8574": {"manufacturer": "NXP", "description": "8-bit I/O expander, I2C"},
+    "ADS1115": {"manufacturer": "Texas Instruments", "description": "16-bit ADC, 4-channel, I2C"},
+    "MCP2515": {"manufacturer": "Microchip", "description": "CAN bus controller, SPI"},
+    # Wireless
+    "NRF24L01": {"manufacturer": "Nordic", "description": "2.4 GHz transceiver, SPI"},
+    "CC1101": {"manufacturer": "Texas Instruments", "description": "Sub-1 GHz transceiver"},
+    "SX1278": {"manufacturer": "Semtech", "description": "LoRa transceiver, 137-525 MHz"},
+    # Motor drivers
+    "L298N": {"manufacturer": "STMicroelectronics", "description": "Dual H-bridge motor driver"},
+    "A4988": {"manufacturer": "Allegro", "description": "Stepper motor driver, microstepping"},
+    "TMC2209": {"manufacturer": "Trinamic", "description": "Stepper motor driver, UART, StealthChop"},
+    "DRV8825": {"manufacturer": "Texas Instruments", "description": "Stepper motor driver, 1/32 step"},
+    # LEDs
+    "WS2812": {"manufacturer": "Worldsemi", "description": "Addressable RGB LED, 5050 package"},
+    "WS2812B": {"manufacturer": "Worldsemi", "description": "Addressable RGB LED, 5050 package"},
+    "SK6812": {"manufacturer": "Various", "description": "Addressable RGBW LED, 5050 package"},
+    # Connectors
+    "XT60": {"manufacturer": "Amass", "description": "High-current DC connector, 60A rated"},
+    "XT30": {"manufacturer": "Amass", "description": "High-current DC connector, 30A rated"},
+    # Power
+    "XL6009": {"manufacturer": "XLSEMI", "description": "4A DC-DC boost converter IC"},
+    "XL6019": {"manufacturer": "XLSEMI", "description": "5A DC-DC boost converter IC"},
+}
+
+
+def lookup_part(part_number):
+    """Look up a part number in the local component database.
+
+    Tries exact match first, then prefix match for chip families.
+
+    Args:
+        part_number: Uppercase part number string.
+
+    Returns:
+        Dict with manufacturer and description, or None if not found.
+    """
+    part = part_number.upper()
+    if part in PART_DATABASE:
+        return PART_DATABASE[part]
+    # Try prefix match (e.g. STM32F446 matches STM32F4xx patterns)
+    for db_part, info in PART_DATABASE.items():
+        if part.startswith(db_part) or db_part.startswith(part):
+            return info
+    return None
 
 
 def load_ecb_rates():
@@ -230,12 +334,12 @@ def categorize_order(item_titles):
             is_automotive = True
             break
 
+    if is_automotive:
+        return "Automotive"
+
     for keyword in ELECTRONICS_KEYWORDS:
         pattern = r"\b" + re.escape(keyword.strip()) + r"\b"
         if re.search(pattern, combined):
-            if is_automotive:
-                # Vehicle part that happens to mention an electronics term
-                continue
             return "Electronics"
     return "Other"
 
@@ -702,15 +806,17 @@ def extract_receipt_data(page, order_id):
     return data
 
 
-def convert_png_to_pdf(png_path, pdf_path):
-    """Convert a PNG screenshot to a single-page PDF.
+def convert_png_to_pdf(png_path, pdf_path, order=None):
+    """Convert a PNG screenshot to a PDF with copyable text.
 
-    Embeds the full screenshot image into an A4-width PDF page,
-    scaling the height proportionally so the entire screenshot is visible.
+    Page 1 contains a text-based invoice generated from order data
+    (items, price, date). Page 2 embeds the original screenshot.
+    If no order data is available, only the screenshot page is created.
 
     Args:
         png_path: Path to the source PNG file.
         pdf_path: Path where the resulting PDF will be saved.
+        order: Optional order dict with items, total_usd, date, order_id.
 
     Returns:
         Path to the created PDF, or None on failure.
@@ -721,8 +827,68 @@ def convert_png_to_pdf(png_path, pdf_path):
         with Image.open(str(png_path)) as img:
             img_w, img_h = img.size
 
+        # Sanitize text for PDF (Helvetica doesn't support all Unicode)
+        replacements = {"€": "EUR", "£": "GBP", "¥": "JPY",
+                        "\u2013": "-", "\u2014": "--",
+                        "\u2018": "'", "\u2019": "'",
+                        "\u201c": '"', "\u201d": '"'}
+
+        def safe(text):
+            """Encode text safely for Helvetica font."""
+            for char, repl in replacements.items():
+                text = text.replace(char, repl)
+            return text.encode("latin-1", errors="replace").decode("latin-1")
+
         pdf = FPDF()
-        # A4 width = 210 mm, use 190 mm with 10 mm margins
+
+        # Page 1: text-based invoice from order data
+        if order:
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+
+            pdf.set_font("Helvetica", "B", 16)
+            pdf.cell(0, 10, "AliExpress Order Invoice (from order data)",
+                     new_x="LMARGIN", new_y="NEXT", align="C")
+            pdf.ln(6)
+
+            pdf.set_font("Helvetica", "", 10)
+            pdf.cell(40, 6, "Order ID:", new_x="RIGHT")
+            pdf.cell(0, 6, str(order.get("order_id", "")),
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(40, 6, "Date:", new_x="RIGHT")
+            pdf.cell(0, 6, str(order.get("date", "")),
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(40, 6, "Category:", new_x="RIGHT")
+            pdf.cell(0, 6, str(order.get("category", "Other")),
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(4)
+
+            items = order.get("items", [])
+            if items:
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.cell(0, 7, "Items", new_x="LMARGIN", new_y="NEXT")
+                pdf.set_font("Helvetica", "", 9)
+                for i, title in enumerate(items, 1):
+                    text = safe(title[:80])
+                    pdf.cell(0, 5, f"  {i}. {text}",
+                             new_x="LMARGIN", new_y="NEXT")
+                pdf.ln(4)
+
+            total = order.get("total_usd", 0)
+            if total:
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.cell(40, 7, "Total (USD):", new_x="RIGHT")
+                pdf.cell(0, 7, f"${total:.2f}",
+                         new_x="LMARGIN", new_y="NEXT")
+
+            pdf.ln(6)
+            pdf.set_font("Helvetica", "I", 8)
+            pdf.cell(0, 5,
+                     "Note: Receipt data unavailable. "
+                     "See screenshot on next page.",
+                     new_x="LMARGIN", new_y="NEXT")
+
+        # Page 2 (or page 1 if no order data): embedded screenshot
         page_w = 190
         scale = page_w / img_w
         page_h = img_h * scale
@@ -733,7 +899,7 @@ def convert_png_to_pdf(png_path, pdf_path):
         pdf.output(str(pdf_path))
         return pdf_path
     except Exception as exc:
-        print(f"    PNG→PDF conversion failed: {exc}")
+        print(f"    PNG->PDF conversion failed: {exc}")
         return None
 
 
@@ -929,7 +1095,7 @@ def generate_invoice_md(receipt_data, order, md_path, ecb_rates):
                     lines.append(line.strip())
             lines.append("")
 
-    # Octopart part identification for electronics orders
+    # Component identification for electronics orders
     if order.get("category") == "Electronics":
         item_titles = []
         if receipt_data and receipt_data.get("items"):
@@ -941,11 +1107,18 @@ def generate_invoice_md(receipt_data, order, md_path, ecb_rates):
             for title in item_titles:
                 parts = extract_part_numbers(title)
                 if parts:
-                    url = octopart_search_url(parts[0])
-                    lines.append(f"- **{', '.join(parts)}** — {title} ([Octopart]({url}))")
+                    info_parts = []
+                    for pn in parts:
+                        info = lookup_part(pn)
+                        if info:
+                            info_parts.append(
+                                f"**{pn}** ({info['manufacturer']}"
+                                f" — {info['description']})")
+                        else:
+                            info_parts.append(f"**{pn}**")
+                    lines.append(f"- {'; '.join(info_parts)} — {title}")
                 else:
-                    url = octopart_search_url(title[:40])
-                    lines.append(f"- {title} ([Octopart]({url}))")
+                    lines.append(f"- {title}")
             lines.append("")
 
     md_path.write_text("\n".join(lines), encoding="utf-8")
@@ -999,7 +1172,7 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
     png_path = year_dir / f"{filename_base}.png"
     if png_path.exists():
         # Convert existing PNG to PDF if not already done
-        converted = convert_png_to_pdf(png_path, pdf_path)
+        converted = convert_png_to_pdf(png_path, pdf_path, order=order)
         if converted:
             print(f"  Converted existing screenshot to PDF: {filename_base}.pdf")
             return pdf_path
@@ -1012,7 +1185,7 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
         time.sleep(3)
         page.screenshot(path=str(png_path), full_page=True)
         # Convert screenshot to PDF
-        convert_png_to_pdf(png_path, pdf_path)
+        convert_png_to_pdf(png_path, pdf_path, order=order)
         generate_invoice_md(None, order, md_path, ecb_rates)
         print(f"  Saved screenshot+PDF for order {order_id}")
         return pdf_path
@@ -1316,16 +1489,20 @@ def generate_yearly_summary(year, year_orders, ecb_rates, output_dir):
 
     total_usd = sum(o["total_usd"] for o in year_orders)
     electronics_orders = [o for o in year_orders if o.get("category") == "Electronics"]
-    other_orders = [o for o in year_orders if o.get("category") != "Electronics"]
+    automotive_orders = [o for o in year_orders if o.get("category") == "Automotive"]
+    other_orders = [o for o in year_orders
+                    if o.get("category") not in ("Electronics", "Automotive")]
 
     electronics_usd = sum(o["total_usd"] for o in electronics_orders)
+    automotive_usd = sum(o["total_usd"] for o in automotive_orders)
     other_usd = sum(o["total_usd"] for o in other_orders)
 
     lines = [
-        f"# Yearly Summary — {year}",
+        f"# Yearly Summary \u2014 {year}",
         "",
         f"**Total Orders:** {len(year_orders)}",
         f"**Electronics Orders:** {len(electronics_orders)}",
+        f"**Automotive Orders:** {len(automotive_orders)}",
         f"**Other Orders:** {len(other_orders)}",
         "",
         "## All Orders",
@@ -1336,6 +1513,7 @@ def generate_yearly_summary(year, year_orders, ecb_rates, output_dir):
 
     total_eur = 0.0
     electronics_eur = 0.0
+    automotive_eur = 0.0
     other_eur = 0.0
 
     for o in sorted(year_orders, key=lambda x: x["date"]):
@@ -1343,6 +1521,8 @@ def generate_yearly_summary(year, year_orders, ecb_rates, output_dir):
         total_eur += eur
         if o.get("category") == "Electronics":
             electronics_eur += eur
+        elif o.get("category") == "Automotive":
+            automotive_eur += eur
         else:
             other_eur += eur
         items_str = "; ".join(o["items"])[:60].replace("|", "/") if o["items"] else "(no title)"
@@ -1356,6 +1536,7 @@ def generate_yearly_summary(year, year_orders, ecb_rates, output_dir):
         f"| Category | USD | EUR |",
         f"|----------|-----|-----|",
         f"| Electronics | ${electronics_usd:.2f} | €{electronics_eur:.2f} |",
+        f"| Automotive | ${automotive_usd:.2f} | €{automotive_eur:.2f} |",
         f"| Other | ${other_usd:.2f} | €{other_eur:.2f} |",
         f"| **Grand Total** | **${total_usd:.2f}** | **€{total_eur:.2f}** |",
         "",
@@ -1375,7 +1556,9 @@ def generate_order_summary(orders, ecb_rates, output_path):
     """
     total_usd = sum(o["total_usd"] for o in orders)
     electronics_orders = [o for o in orders if o.get("category") == "Electronics"]
-    other_orders = [o for o in orders if o.get("category") != "Electronics"]
+    automotive_orders = [o for o in orders if o.get("category") == "Automotive"]
+    other_orders = [o for o in orders
+                    if o.get("category") not in ("Electronics", "Automotive")]
 
     lines = [
         "# AliExpress Order Summary",
@@ -1383,6 +1566,7 @@ def generate_order_summary(orders, ecb_rates, output_path):
         f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         f"**Total Orders:** {len(orders)}",
         f"**Electronics:** {len(electronics_orders)}",
+        f"**Automotive:** {len(automotive_orders)}",
         f"**Other:** {len(other_orders)}",
         "",
         "## All Orders",
@@ -1548,7 +1732,7 @@ def generate_octopart_report(orders, output_path):
     """Generate a Markdown report with extracted part numbers for electronics items.
 
     Lists electronics order items with extracted component part numbers
-    and Octopart search URLs for verification.
+    and local database lookup results (manufacturer + description).
 
     Args:
         orders: List of all order dicts.
@@ -1564,8 +1748,8 @@ def generate_octopart_report(orders, output_path):
         f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         f"**Electronics Orders:** {len(electronics_orders)}",
         "",
-        "| Date | Order ID | Item | Part Number(s) | Octopart |",
-        "|------|----------|------|----------------|----------|",
+        "| Date | Order ID | Item | Part Number(s) | Manufacturer | Description |",
+        "|------|----------|------|----------------|--------------|-------------|",
     ]
 
     for order in sorted(electronics_orders, key=lambda x: x["date"]):
@@ -1573,24 +1757,29 @@ def generate_octopart_report(orders, output_path):
             for item in order["items"]:
                 parts = extract_part_numbers(item)
                 parts_str = ", ".join(parts) if parts else "—"
-                search_q = parts[0] if parts else item[:40]
-                url = octopart_search_url(search_q)
+                mfr = "—"
+                desc = "—"
+                if parts:
+                    info = lookup_part(parts[0])
+                    if info:
+                        mfr = info["manufacturer"]
+                        desc = info["description"]
                 title = item[:60].replace("|", "/")
                 lines.append(
                     f"| {order['date']} | {order['order_id']} | "
-                    f"{title} | {parts_str} | [Search]({url}) |"
+                    f"{title} | {parts_str} | {mfr} | {desc} |"
                 )
         else:
             lines.append(
                 f"| {order['date']} | {order['order_id']} | "
-                f"*(no title)* | — | — |"
+                f"*(no title)* | — | — | — |"
             )
 
     lines.append("")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Octopart report saved: {output_path}")
+    print(f"Electronics part report saved: {output_path}")
 
 
 def generate_run_report(orders, download_paths, ecb_rates):
@@ -1880,6 +2069,13 @@ def main():
 
     # Convert any remaining PNG screenshots to PDFs
     print("\nConverting remaining PNG screenshots to PDF...")
+    # Build order lookup by filename pattern for order data
+    order_by_file = {}
+    for o in orders:
+        date_str = o.get("date", "unknown")
+        key = f"{date_str}-{o['order_id']}"
+        order_by_file[key] = o
+
     png_converted = 0
     for year_dir in INVOICES_DIR.iterdir():
         if not year_dir.is_dir():
@@ -1887,7 +2083,9 @@ def main():
         for png_file in year_dir.glob("*.png"):
             pdf_file = png_file.with_suffix(".pdf")
             if not pdf_file.exists():
-                if convert_png_to_pdf(png_file, pdf_file):
+                file_key = png_file.stem
+                matched_order = order_by_file.get(file_key)
+                if convert_png_to_pdf(png_file, pdf_file, order=matched_order):
                     png_converted += 1
     print(f"  Converted {png_converted} PNG files to PDF.")
 
@@ -1907,7 +2105,7 @@ def main():
     generate_order_summary(orders, ecb_rates, SCRIPT_DIR / "orders_summary.md")
 
     # Generate Octopart search report for electronics items
-    print("\nGenerating Octopart search report...")
+    print("\nGenerating electronics part report...")
     generate_octopart_report(orders, ANALYSIS_DIR / "octopart_search.md")
 
     # Build and display summary table
@@ -1923,13 +2121,18 @@ def main():
         float(r["Price (EUR)"].replace("€", ""))
         for r in rows if r["Category"] == "Electronics"
     )
+    automotive_total_eur = sum(
+        float(r["Price (EUR)"].replace("€", ""))
+        for r in rows if r["Category"] == "Automotive"
+    )
     other_total_eur = sum(
         float(r["Price (EUR)"].replace("€", ""))
         for r in rows if r["Category"] == "Other"
     )
-    total_eur = electronics_total_eur + other_total_eur
+    total_eur = electronics_total_eur + automotive_total_eur + other_total_eur
 
     print(f"\nElectronics total: €{electronics_total_eur:.2f}")
+    print(f"Automotive total:  €{automotive_total_eur:.2f}")
     print(f"Other total:       €{other_total_eur:.2f}")
     print(f"Grand total:       €{total_eur:.2f}")
 

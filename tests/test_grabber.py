@@ -23,6 +23,7 @@ from grabber import (
     generate_order_summary,
     generate_run_report,
     generate_yearly_summary,
+    lookup_part,
     octopart_search_url,
     parse_aliexpress_date,
     parse_raw_order,
@@ -197,7 +198,7 @@ class TestCategorizeOrder:
 
     def test_motorcycle_is_not_electronics(self):
         """Motorcycle brake pads must NOT match — 'motor' != 'motorcycle'."""
-        assert categorize_order(["Motorcycle Front Rear Brake Disc Pads"]) == "Other"
+        assert categorize_order(["Motorcycle Front Rear Brake Disc Pads"]) == "Automotive"
 
     def test_stepper_motor_is_electronics(self):
         assert categorize_order(["Nema 17 Stepper Motor 42mm"]) == "Electronics"
@@ -354,16 +355,17 @@ class TestGenerateInvoiceMd:
         assert "Electronics" in content
         assert "EUR" in content
 
-    def test_electronics_md_has_octopart_links(self, tmp_path, ecb_rates):
+    def test_electronics_md_has_component_identification(self, tmp_path, ecb_rates):
+        """Electronics orders include a component identification section."""
         receipt = {
             "order_id": "777",
-            "items": [{"title": "Arduino Nano", "price": "$5.00", "quantity": "1"}],
+            "items": [{"title": "ESP32 Dev Board", "price": "$5.00", "quantity": "1"}],
             "total": "$5.00",
         }
         order = {
             "order_id": "777",
             "date": "2025-01-15",
-            "items": ["Arduino Nano"],
+            "items": ["ESP32 Dev Board"],
             "total_usd": 5.00,
             "category": "Electronics",
         }
@@ -371,8 +373,8 @@ class TestGenerateInvoiceMd:
         generate_invoice_md(receipt, order, md_path, ecb_rates)
         content = md_path.read_text(encoding="utf-8")
         assert "Component Identification" in content
-        assert "octopart.com/search" in content
-        assert "Arduino Nano" in content
+        assert "ESP32" in content
+        assert "Espressif" in content
 
     def test_without_receipt_data(self, tmp_path, ecb_rates):
         order = {
@@ -458,6 +460,7 @@ class TestGenerateOctopartReport:
     """Test Octopart search report generation."""
 
     def test_creates_report_for_electronics(self, tmp_path):
+        """Report is created for electronics orders only."""
         orders = [
             {"order_id": "1", "date": "2025-01-13", "items": ["Arduino Nano"], "total_usd": 10.0, "category": "Electronics"},
             {"order_id": "2", "date": "2025-01-14", "items": ["T-Shirt"], "total_usd": 5.0, "category": "Other"},
@@ -466,7 +469,7 @@ class TestGenerateOctopartReport:
         generate_octopart_report(orders, report_path)
         assert report_path.exists()
         content = report_path.read_text(encoding="utf-8")
-        assert "Octopart" in content
+        assert "Part Identification" in content
         assert "Arduino Nano" in content
         assert "T-Shirt" not in content
 
@@ -478,15 +481,16 @@ class TestGenerateOctopartReport:
         generate_octopart_report(orders, report_path)
         assert not report_path.exists()
 
-    def test_contains_search_links(self, tmp_path):
+    def test_contains_part_info(self, tmp_path):
+        """Report contains manufacturer and description from local database."""
         orders = [
             {"order_id": "1", "date": "2025-01-13", "items": ["ESP32 Dev Board", "10K Resistor"], "total_usd": 15.0, "category": "Electronics"},
         ]
         report_path = tmp_path / "octopart.md"
         generate_octopart_report(orders, report_path)
         content = report_path.read_text(encoding="utf-8")
-        assert "octopart.com/search" in content
         assert "ESP32" in content
+        assert "Espressif" in content
         assert "Resistor" in content
 
 
@@ -529,29 +533,37 @@ class TestGenerateRunReport:
 class TestAutomotiveExclusion:
     """Test that automotive/motorcycle items are not classified as Electronics."""
 
-    def test_motorcycle_cnc_part_is_other(self):
-        assert categorize_order(["CNC Aluminum Motorcycle Brake Handle"]) == "Other"
+    def test_motorcycle_cnc_part_is_automotive(self):
+        """Motorcycle parts are classified as Automotive."""
+        assert categorize_order(["CNC Aluminum Motorcycle Brake Handle"]) == "Automotive"
 
-    def test_car_diagnostic_hex_v2_is_other(self):
-        assert categorize_order(["Real ARM STM32F429 Chip For VAG HEX V2"]) == "Other"
+    def test_car_diagnostic_hex_v2_is_automotive(self):
+        """Car diagnostic tools are classified as Automotive."""
+        assert categorize_order(["Real ARM STM32F429 Chip For VAG HEX V2"]) == "Automotive"
 
-    def test_obd_scanner_is_other(self):
-        assert categorize_order(["ELM327 Mini V2.1 Bluetooth OBD2 Diagnostic"]) == "Other"
+    def test_obd_scanner_is_automotive(self):
+        """OBD scanners are classified as Automotive."""
+        assert categorize_order(["ELM327 Mini V2.1 Bluetooth OBD2 Diagnostic"]) == "Automotive"
 
-    def test_flex_fuel_sensor_is_other(self):
-        assert categorize_order(["Flex Fuel Sensor for Buick Cadillac"]) == "Other"
+    def test_flex_fuel_sensor_is_automotive(self):
+        """Flex fuel sensors for cars are classified as Automotive."""
+        assert categorize_order(["Flex Fuel Sensor for Buick Cadillac"]) == "Automotive"
 
-    def test_o2_sensor_is_other(self):
-        assert categorize_order(["O2 Oxygen Sensor for Honda CRF"]) == "Other"
+    def test_o2_sensor_is_automotive(self):
+        """O2 sensors for vehicles are classified as Automotive."""
+        assert categorize_order(["O2 Oxygen Sensor for Honda CRF"]) == "Automotive"
 
-    def test_starter_relay_motorcycle_is_other(self):
-        assert categorize_order(["Starter Relay Solenoid for Kawasaki ZX750"]) == "Other"
+    def test_starter_relay_motorcycle_is_automotive(self):
+        """Motorcycle starter relay is classified as Automotive."""
+        assert categorize_order(["Starter Relay Solenoid for Kawasaki ZX750"]) == "Automotive"
 
-    def test_motorcycle_kill_switch_is_other(self):
-        assert categorize_order(["Motorcycle CNC Billet Engine Stop Start Kill Switch"]) == "Other"
+    def test_motorcycle_kill_switch_is_automotive(self):
+        """Motorcycle kill switch is classified as Automotive."""
+        assert categorize_order(["Motorcycle CNC Billet Engine Stop Start Kill Switch"]) == "Automotive"
 
-    def test_openport_ecu_flash_is_other(self):
-        assert categorize_order(["Openport 2.0 ECU Flash J2534"]) == "Other"
+    def test_openport_ecu_flash_is_automotive(self):
+        """ECU flash tools are classified as Automotive."""
+        assert categorize_order(["Openport 2.0 ECU Flash J2534"]) == "Automotive"
 
     def test_pure_esp32_still_electronics(self):
         assert categorize_order(["ESP32 Development Board WiFi Module"]) == "Electronics"
@@ -624,7 +636,73 @@ class TestConvertPngToPdf:
         assert pdf_path.stat().st_size > 0
 
     def test_returns_none_on_missing_png(self, tmp_path):
+        """Missing PNG should return None."""
         png_path = tmp_path / "missing.png"
         pdf_path = tmp_path / "out.pdf"
         result = convert_png_to_pdf(png_path, pdf_path)
         assert result is None
+
+    def test_creates_pdf_with_order_data(self, tmp_path):
+        """PDF with order data should have text page + screenshot page."""
+        from PIL import Image
+        png_path = tmp_path / "order.png"
+        img = Image.new("RGB", (800, 600), color=(200, 200, 200))
+        img.save(str(png_path))
+
+        order = {
+            "order_id": "12345",
+            "date": "2025-03-15",
+            "items": ["ESP32 Dev Board", "10K Resistor Pack"],
+            "total_usd": 12.50,
+            "category": "Electronics",
+        }
+        pdf_path = tmp_path / "order.pdf"
+        result = convert_png_to_pdf(png_path, pdf_path, order=order)
+        assert result == pdf_path
+        assert pdf_path.exists()
+        # PDF with order data should be larger (has text page + image page)
+        assert pdf_path.stat().st_size > 500
+
+
+# ---------------------------------------------------------------------------
+# Part database lookup tests
+# ---------------------------------------------------------------------------
+
+class TestLookupPart:
+    """Test local part database lookups."""
+
+    def test_exact_match(self):
+        """Known part number returns correct info."""
+        info = lookup_part("ESP32")
+        assert info is not None
+        assert info["manufacturer"] == "Espressif"
+        assert "WiFi" in info["description"]
+
+    def test_case_insensitive(self):
+        """Lookup is case-insensitive (input uppercased internally)."""
+        info = lookup_part("esp32")
+        assert info is not None
+        assert info["manufacturer"] == "Espressif"
+
+    def test_prefix_match(self):
+        """Part number that extends a known prefix should match."""
+        info = lookup_part("STM32F407VET6")
+        assert info is not None
+        assert info["manufacturer"] == "STMicroelectronics"
+
+    def test_unknown_part(self):
+        """Unknown part number returns None."""
+        info = lookup_part("XYZZY9999")
+        assert info is None
+
+    def test_diode(self):
+        """Common diode part number matches."""
+        info = lookup_part("1N4007")
+        assert info is not None
+        assert "rectifier" in info["description"].lower()
+
+    def test_sensor(self):
+        """Common sensor part number matches."""
+        info = lookup_part("DHT22")
+        assert info is not None
+        assert "temperature" in info["description"].lower()

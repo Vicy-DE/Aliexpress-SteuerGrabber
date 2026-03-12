@@ -81,6 +81,44 @@
 
 ---
 
+## 7. Automotive Category — Classification
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | N/A (string matching) |
+| **Dependencies** | N/A (stdlib only) |
+| **Requirements** | - Orders matching automotive keywords (motorcycle, OBD, car diagnostic, etc.) are classified as "Automotive" instead of "Other". |
+|  | - Automotive keywords take priority over electronics keywords. |
+|  | - Three categories: "Electronics", "Automotive", "Other". |
+|  | - Yearly summaries, order summaries, and CSV export reflect all three categories. |
+
+## 8. Local Part Database — Component Identification
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | N/A (in-memory dict) |
+| **Dependencies** | N/A (stdlib only) |
+| **Requirements** | - Curated local database of ~80 common electronic components (MCUs, ICs, sensors, connectors, etc.). |
+|  | - `lookup_part()` matches part numbers exactly first, then by prefix for chip families. |
+|  | - Replaces Octopart search links in Markdown invoices and reports with actual manufacturer + description. |
+|  | - Octopart report now shows local database results instead of external search links. |
+
+## 9. PNG to PDF with Copyable Text — Invoice Fallback
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber |
+| **Interface** | File I/O |
+| **Dependencies** | fpdf2, Pillow |
+| **Requirements** | - When receipt extraction fails and a screenshot fallback is used, the generated PDF includes a text page with order data (order ID, date, category, items, total). |
+|  | - The screenshot is embedded as a second page. |
+|  | - Text on the first page is copyable (not an image). |
+|  | - If no order data is available, only the screenshot page is created. |
+
+---
+
 ## Traceability Matrix
 
 | Req # | Feature | Depends On |
@@ -91,3 +129,6 @@
 | 4 | EUR Conversion | — |
 | 5 | Order Categorization | 2 |
 | 6 | CSV Export & Summary Table | 2, 4, 5 |
+| 7 | Automotive Category | 5 |
+| 8 | Local Part Database | 5 |
+| 9 | PNG to PDF with Copyable Text | 3 |

@@ -1,3 +1,39 @@
+## [2026-03-12] Automotive category, local part database, copyable-text fallback PDFs
+
+### What was changed
+- `grabber.py` — `categorize_order()` now returns "Automotive" (instead of "Other") for automotive keyword matches.
+- `grabber.py` — Added `PART_DATABASE` constant with ~80 curated electronic components (MCUs, ICs, sensors, connectors, motor drivers, LEDs, power ICs).
+- `grabber.py` — Added `lookup_part(part_number)` function for exact + prefix matching against the local database.
+- `grabber.py` — Rewrote `convert_png_to_pdf()` — accepts optional `order` parameter; generates text page (order ID, date, category, items, total) + screenshot page.
+- `grabber.py` — Updated `download_invoice_from_detail_page()` to pass `order` dict to `convert_png_to_pdf()` in fallback paths.
+- `grabber.py` — Updated `generate_invoice_md()` — Component Identification now uses `lookup_part()` with manufacturer + description from local database.
+- `grabber.py` — Rewrote `generate_octopart_report()` — shows Manufacturer + Description columns from local database instead of Octopart search links.
+- `grabber.py` — Updated `generate_yearly_summary()` for 3 categories (Electronics, Automotive, Other) in both order table and totals.
+- `grabber.py` — Updated `generate_order_summary()` for 3 categories.
+- `grabber.py` — Updated `main()` summary stats to print Electronics, Automotive, and Other totals.
+- `grabber.py` — Updated batch PNG→PDF in `main()` to pass matched order data for text-based fallback PDFs.
+- `tests/test_grabber.py` — Updated all automotive tests from "Other" to "Automotive" (8 tests).
+- `tests/test_grabber.py` — Added `TestLookupPart` (6 tests: exact, case-insensitive, prefix, unknown, diode, sensor).
+- `tests/test_grabber.py` — Added `test_creates_pdf_with_order_data` for PNG→PDF with order parameter.
+- `tests/test_grabber.py` — Updated Octopart report and Markdown invoice tests for new format.
+- `Documentation/Requirements/requirements.md` — Added Req #7 (Automotive Category), #8 (Local Part Database), #9 (PNG-to-PDF Copyable Text).
+
+### Why it was changed
+- User requested: define an automotive category, remove Octopart search links and show one fitting result, convert PNG screenshots to PDF with copyable text.
+- Prior behavior classified automotive items as "Other" — now correctly labeled "Automotive".
+- Octopart API requires OAuth2 — replaced with curated local database of ~80 common electronic components.
+- Fallback PDFs were screenshot-only — now include a text page with order data for copyable text.
+
+### What it does / expected behaviour
+- Three-category classification: Electronics, Automotive, Other.
+- Fallback PDFs have 2 pages: page 1 with copyable order data text, page 2 with embedded screenshot.
+- Electronics reports and Markdown invoices show manufacturer + description from the local part database.
+- 2023-2026 invoices: 100% text-based PDF (0 screenshot fallbacks).
+- Full rerun: 1070/1071 PDFs, 0 screenshots, 1 failure.
+
+### Verified
+- Run: OK (85 tests pass, full rerun successful)
+
 ## [2026-03-12] Automotive exclusion, part number extraction, PNG→PDF conversion, direct receipt URL
 
 ### What was changed
