@@ -6,30 +6,26 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 
 ```bash
 pip install -r requirements.txt
-playwright install chromium
-```
-
-## Configuration
-
-Copy `.env.example` to `.env` and fill in your AliExpress credentials:
-
-```bash
-cp .env.example .env
+playwright install firefox
 ```
 
 ## Usage
+
+1. Open Firefox and log into [AliExpress](https://www.aliexpress.com/)
+2. Run the script (keep Firefox open):
 
 ```bash
 python grabber.py
 ```
 
 The script will:
-1. Log into AliExpress using browser automation (manual login on first run)
-2. Scrape all completed orders
-3. Download invoice PDFs to `invoices/`
-4. Look up USD→EUR exchange rates for each order date (ECB data)
-5. Categorize each order (electronics vs. other)
-6. Output a summary table to the console and `orders_summary.csv`
+1. Extract session cookies from your running Firefox browser
+2. Open a Playwright Firefox window using those cookies (no manual login needed)
+3. Scrape all completed orders
+4. Download invoice PDFs to `invoices/`
+5. Look up USD→EUR exchange rates for each order date (ECB data)
+6. Categorize each order (electronics vs. other)
+7. Output a summary table to the console and `orders_summary.csv`
 
 ## Output
 

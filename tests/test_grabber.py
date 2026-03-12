@@ -15,10 +15,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from grabber import (
     categorize_order,
+    convert_png_to_pdf,
+    extract_part_numbers,
     generate_invoice_md,
     generate_invoice_pdf,
     generate_octopart_report,
     generate_order_summary,
+    generate_run_report,
     generate_yearly_summary,
     octopart_search_url,
     parse_aliexpress_date,
@@ -367,7 +370,7 @@ class TestGenerateInvoiceMd:
         md_path = tmp_path / "elec.md"
         generate_invoice_md(receipt, order, md_path, ecb_rates)
         content = md_path.read_text(encoding="utf-8")
-        assert "Octopart Search" in content
+        assert "Component Identification" in content
         assert "octopart.com/search" in content
         assert "Arduino Nano" in content
 
@@ -485,3 +488,143 @@ class TestGenerateOctopartReport:
         assert "octopart.com/search" in content
         assert "ESP32" in content
         assert "Resistor" in content
+
+
+# ---------------------------------------------------------------------------
+# Run Report tests
+# ---------------------------------------------------------------------------
+
+class TestGenerateRunReport:
+    """Test run report generation."""
+
+    def test_creates_report_with_status(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("grabber.SCRIPT_DIR", tmp_path)
+        orders = [
+            {"order_id": "111", "date": "2025-01-13", "items": ["Widget"], "total_usd": 5.0, "category": "Other"},
+            {"order_id": "222", "date": "2025-02-10", "items": ["Gadget"], "total_usd": 10.0, "category": "Electronics"},
+            {"order_id": "333", "date": "2026-01-05", "items": ["Thing"], "total_usd": 3.0, "category": "Other"},
+        ]
+        download_paths = {
+            "111": tmp_path / "invoices" / "2025" / "2025-01-13-111.pdf",
+            "222": tmp_path / "invoices" / "2025" / "2025-02-10-222.png",
+            "333": None,
+        }
+        ecb_rates = {"2025-01-13": 1.03, "2026-01-05": 1.05}
+        generate_run_report(orders, download_paths, ecb_rates)
+        report = (tmp_path / "run_report.md").read_text(encoding="utf-8")
+        assert "PDF Invoices:** 1" in report
+        assert "Screenshot Fallbacks:** 1" in report
+        assert "Failed Downloads:** 1" in report
+        assert "✓ PDF" in report
+        assert "📷 Screenshot" in report
+        assert "✗ Failed" in report
+        assert "2025" in report
+        assert "2026" in report
+
+
+# ---------------------------------------------------------------------------
+# Automotive exclusion tests
+# ---------------------------------------------------------------------------
+
+class TestAutomotiveExclusion:
+    """Test that automotive/motorcycle items are not classified as Electronics."""
+
+    def test_motorcycle_cnc_part_is_other(self):
+        assert categorize_order(["CNC Aluminum Motorcycle Brake Handle"]) == "Other"
+
+    def test_car_diagnostic_hex_v2_is_other(self):
+        assert categorize_order(["Real ARM STM32F429 Chip For VAG HEX V2"]) == "Other"
+
+    def test_obd_scanner_is_other(self):
+        assert categorize_order(["ELM327 Mini V2.1 Bluetooth OBD2 Diagnostic"]) == "Other"
+
+    def test_flex_fuel_sensor_is_other(self):
+        assert categorize_order(["Flex Fuel Sensor for Buick Cadillac"]) == "Other"
+
+    def test_o2_sensor_is_other(self):
+        assert categorize_order(["O2 Oxygen Sensor for Honda CRF"]) == "Other"
+
+    def test_starter_relay_motorcycle_is_other(self):
+        assert categorize_order(["Starter Relay Solenoid for Kawasaki ZX750"]) == "Other"
+
+    def test_motorcycle_kill_switch_is_other(self):
+        assert categorize_order(["Motorcycle CNC Billet Engine Stop Start Kill Switch"]) == "Other"
+
+    def test_openport_ecu_flash_is_other(self):
+        assert categorize_order(["Openport 2.0 ECU Flash J2534"]) == "Other"
+
+    def test_pure_esp32_still_electronics(self):
+        assert categorize_order(["ESP32 Development Board WiFi Module"]) == "Electronics"
+
+    def test_pure_arduino_still_electronics(self):
+        assert categorize_order(["Arduino Nano Every MEGA2560"]) == "Electronics"
+
+    def test_pure_resistor_still_electronics(self):
+        assert categorize_order(["100PCS 1N4001 1N4007 Diode Kit"]) == "Electronics"
+
+
+# ---------------------------------------------------------------------------
+# Part number extraction tests
+# ---------------------------------------------------------------------------
+
+class TestExtractPartNumbers:
+    """Test electronic component part number extraction from titles."""
+
+    def test_esp32(self):
+        parts = extract_part_numbers("ESP32 C3 Development Board")
+        assert "ESP32" in parts
+
+    def test_stm32(self):
+        parts = extract_part_numbers("STM32F429 Chip For VAG")
+        assert "STM32F429" in parts
+
+    def test_diode(self):
+        parts = extract_part_numbers("100PCS 1N4001 1N4004 1N4007")
+        assert "1N4001" in parts
+        assert "1N4007" in parts
+
+    def test_ne555(self):
+        parts = extract_part_numbers("NE555 Timer IC Module")
+        assert "NE555" in parts
+
+    def test_atmega(self):
+        parts = extract_part_numbers("MEGA2560 ATmega2560-16AU Board")
+        assert "ATMEGA2560" in parts
+
+    def test_no_parts(self):
+        parts = extract_part_numbers("Generic Phone Case Cover")
+        assert parts == []
+
+    def test_pcf8574(self):
+        parts = extract_part_numbers("LCD1602 I2C PCF8574 Module")
+        assert "PCF8574" in parts
+
+    def test_ws2812(self):
+        parts = extract_part_numbers("WS2812B LED Strip Neopixel")
+        assert "WS2812B" in parts
+
+
+# ---------------------------------------------------------------------------
+# PNG to PDF conversion tests
+# ---------------------------------------------------------------------------
+
+class TestConvertPngToPdf:
+    """Test PNG screenshot to PDF conversion."""
+
+    def test_creates_pdf_from_png(self, tmp_path):
+        from PIL import Image
+        png_path = tmp_path / "test.png"
+        img = Image.new("RGB", (800, 1200), color=(255, 255, 255))
+        img.save(str(png_path))
+
+        pdf_path = tmp_path / "test.pdf"
+        result = convert_png_to_pdf(png_path, pdf_path)
+        assert result == pdf_path
+        assert pdf_path.exists()
+        assert pdf_path.stat().st_size > 0
+
+    def test_returns_none_on_missing_png(self, tmp_path):
+        png_path = tmp_path / "missing.png"
+        pdf_path = tmp_path / "out.pdf"
+        result = convert_png_to_pdf(png_path, pdf_path)
+        assert result is None

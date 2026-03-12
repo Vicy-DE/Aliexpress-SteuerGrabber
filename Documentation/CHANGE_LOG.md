@@ -1,3 +1,35 @@
+## [2026-03-12] Automotive exclusion, part number extraction, PNG→PDF conversion, direct receipt URL
+
+### What was changed
+- `grabber.py` — Removed broad "cnc" from `ELECTRONICS_KEYWORDS`; replaced with "cnc machine", "cnc router".
+- `grabber.py` — Added `AUTOMOTIVE_KEYWORDS` constant (~40 keywords: motorcycle, OBD, HEX V2, INPA, carburetor, exhaust, flex fuel, etc.).
+- `grabber.py` — Rewrote `categorize_order()` to check automotive keywords first; items matching both automotive and electronics keywords are classified as "Other".
+- `grabber.py` — Added `extract_part_numbers(title)` function with 40+ regex patterns for component identification (ESP32, STM32, ATmega, 1N4007, NE555, WS2812, etc.).
+- `grabber.py` — Rewrote `generate_octopart_report()` to include extracted part numbers in a table format with Octopart search links.
+- `grabber.py` — Updated `generate_invoice_md()` — "Component Identification" section replaces "Octopart Search", listing extracted part numbers.
+- `grabber.py` — Added `convert_png_to_pdf(png_path, pdf_path)` using fpdf2 + PIL to embed screenshot PNGs in PDF format.
+- `grabber.py` — Updated `download_invoice_from_detail_page()` — screenshot fallback now also converts PNG→PDF.
+- `grabber.py` — Added batch PNG→PDF conversion step in `main()` after worker processing.
+- `grabber.py` — Changed `extract_receipt_data()` to navigate directly to tax-ui URL instead of clicking Receipt button and waiting for iframe.
+- `grabber.py` — Changed `MAX_WORKERS` from 4 to 2, `headless=False` for reliable receipt extraction.
+- `tests/test_grabber.py` — Added `TestAutomotiveExclusion` (11 tests), `TestExtractPartNumbers` (8 tests), `TestConvertPngToPdf` (2 tests). Fixed "Octopart Search" → "Component Identification" assertion.
+
+### Why it was changed
+- Car diagnostic tools (HEX V2, OBD scanners, Openport ECU Flash) and motorcycle parts were incorrectly categorized as "Electronics" because they matched broad keywords like "stm32", "programmer", "sensor", "relay".
+- Octopart report needed real part number extraction instead of just search links with full item titles.
+- Invoice screenshots (PNG) needed conversion to PDF for consistent tax documentation format.
+- Receipt extraction via iframe detection failed silently in headed mode; direct URL navigation is 100% reliable.
+
+### What it does / expected behaviour
+- 255 electronics orders correctly identified (down from ~280+ with false positives).
+- All automotive/motorcycle/OBD/diagnostic items categorized as "Other".
+- Octopart report shows extracted part numbers (ATMEGA328P, ESP8266, 2N7000, SSD1306, etc.) with search links.
+- Full rerun: 1071 orders → 1071 PDFs, 0 screenshots, 0 failures (100% success rate).
+
+### Verified
+- Run: OK — `py -3 -m pytest tests/ -v` → 78 passed in 0.87s
+- Live: Full rerun — 1071/1071 PDFs generated, 100% success rate
+
 ## [2026-03-09] Fix receipt extraction, add Octopart search, add parallel downloads
 
 ### What was changed

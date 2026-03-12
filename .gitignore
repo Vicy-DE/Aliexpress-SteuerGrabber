@@ -1,7 +1,16 @@
 .env
 invoices/
+analysis/
+orders_summary.csv
+orders_summary.md
 __pycache__/
 *.pyc
 .venv/
 venv/
 *.egg-info/
+browser_data/
+browser_state.json
+ecb_rates_cache.json
+.pytest_cache/
+diag_*.py
+diag_*.png
