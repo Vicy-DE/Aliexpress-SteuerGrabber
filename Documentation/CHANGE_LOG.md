@@ -1,3 +1,37 @@
+## [2026-03-12] Refactor to multi-module architecture, add OCR pipeline and image-PDF comparison testing
+
+### What was changed
+- `grabber.py` — Rewritten from 1816-line monolith to 181-line thin main() orchestration; all logic delegated to utils/ modules.
+- `utils/__init__.py` — Created package init.
+- `utils/config.py` — Created (272 lines): all constants, paths, URLs, keywords, PART_DATABASE, PART_NUMBER_PATTERNS, TESSERACT_CMD.
+- `utils/exchange.py` — Created (63 lines): load_ecb_rates(), usd_to_eur_rounded_up().
+- `utils/categorizer.py` — Created (63 lines): categorize_order(), extract_part_numbers(), lookup_part().
+- `utils/firefox.py` — Created (141 lines): find_firefox_profile(), extract_firefox_cookies().
+- `utils/scraper.py` — Created (294 lines): parse_aliexpress_date(), parse_raw_order(), scrape_order_list(), scrape_orders_via_api().
+- `utils/receipt.py` — Created (106 lines): extract_receipt_data() with browser-side JS.
+- `utils/pdf_generator.py` — Created (363 lines): convert_png_to_pdf(), generate_invoice_pdf(), ocr_extract_text(), ocr_extract_price(), verify_ocr_against_md(), pdf_to_image(), compare_images_quarter_resolution().
+- `utils/md_generator.py` — Created (105 lines): generate_invoice_md().
+- `utils/reports.py` — Created (376 lines): build_summary_table(), export_csv(), generate_yearly_summary(), generate_order_summary(), copy_electronics_invoices(), generate_octopart_report(), generate_run_report(), print_summary().
+- `utils/downloader.py` — Created (256 lines): download_invoice_from_detail_page(), enrich_and_download(), process_order_batch().
+- `tests/test_grabber.py` — Updated imports from `grabber` to `utils.*` modules; updated monkeypatch target from `grabber.SCRIPT_DIR` to `utils.reports.SCRIPT_DIR`.
+- `tests/test_ocr_pdf.py` — Created (190 lines): 15 new tests for OCR text extraction, price extraction, MD verification, image-PDF round-trip comparison at quarter resolution.
+- `Documentation/Requirements/requirements.md` — Added Req #10-14 (Code Refactoring, Receipt Screenshot Matching, 2017 Order Price Extraction, OCR-Based PDF Creation, Image-PDF Comparison Testing).
+- `Documentation/ToDo/refactor-ocr-pdf.md` — Created task checklist for the refactoring work.
+
+### Why it was changed
+- User requested: max 500 lines per file, OCR-based PDF creation from images, text detection + MD comparison, image-PDF round-trip testing at quarter resolution (≥99% similarity), 2017 order price extraction via OCR.
+
+### What it does / expected behaviour
+- No file exceeds 500 lines (largest: utils/reports.py at 376 lines, grabber.py at 181 lines).
+- OCR pipeline: Tesseract extracts text from receipt screenshots; prices extracted via regex for 2017-era orders missing receipt data.
+- verify_ocr_against_md() cross-checks OCR output (order ID, price, items) against companion MD file.
+- compare_images_quarter_resolution() compares original image vs. PDF-extracted image at 25% resolution using pixel-wise similarity.
+- 2017 orders: OCR price extraction fills in missing total_usd from screenshots.
+- All 100 tests pass (85 existing + 15 new OCR/comparison tests).
+
+### Verified
+- Run: OK (100 tests pass)
+
 ## [2026-03-12] Automotive category, local part database, copyable-text fallback PDFs
 
 ### What was changed

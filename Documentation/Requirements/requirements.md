@@ -119,6 +119,72 @@
 
 ---
 
+## 10. Code Refactoring — Max 500 Lines Per File
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | All modules |
+| **Interface** | N/A (internal restructuring) |
+| **Dependencies** | N/A |
+| **Requirements** | - Split `grabber.py` (currently ~1800 lines) into multiple modules under `utils/`. |
+|  | - No single Python file may exceed 500 lines of code. |
+|  | - `grabber.py` remains the main entry point (orchestration and `main()` only). |
+|  | - New modules: `utils/config.py` (constants/keywords), `utils/exchange.py` (ECB rates), `utils/categorizer.py` (classification + part lookup), `utils/firefox.py` (cookie extraction), `utils/scraper.py` (order list scraping + parsing), `utils/receipt.py` (receipt data extraction), `utils/pdf_generator.py` (PDF creation + OCR verification), `utils/md_generator.py` (Markdown invoices), `utils/reports.py` (summaries + CSV export), `utils/downloader.py` (invoice download + batch processing). |
+|  | - All existing tests must continue to pass after refactoring. |
+|  | - No behaviour change — only structural reorganisation. |
+
+## 11. Receipt Screenshot Matching — Original Format
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber / receipt / pdf_generator |
+| **Interface** | Browser automation / File I/O |
+| **Dependencies** | playwright, fpdf2, pytesseract, opencv-python, Pillow |
+| **Requirements** | - Downloaded receipts must visually match the AliExpress receipt page (same layout as `orginal/` reference screenshots). |
+|  | - For 2023-2025 orders: ≥90% must produce a text-based PDF from receipt data extraction. Remaining orders fall back to screenshot-based PDF. |
+|  | - PDF is created from the receipt screenshot image (not from MD). |
+|  | - OCR text extraction from the screenshot image is compared against the MD content for validation. |
+|  | - The PDF embeds the original screenshot image so it looks identical to the web page. |
+
+## 12. 2017 Order Price Extraction — Legacy Orders
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | grabber / receipt / downloader |
+| **Interface** | Browser automation |
+| **Dependencies** | playwright, pytesseract, Pillow |
+| **Requirements** | - For 2017-era orders where the tax-ui page has no structured receipt data, extract prices from the screenshot using OCR (Tesseract). |
+|  | - Parse `US $X.XX` patterns from OCR'd text to populate `total_usd`. |
+|  | - Fall back to order detail page scraping if OCR also fails. |
+
+## 13. OCR-Based PDF Creation — Image-to-PDF Pipeline
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | pdf_generator |
+| **Interface** | File I/O |
+| **Dependencies** | fpdf2, pytesseract, opencv-python, Pillow |
+| **Requirements** | - Create the fallback PDF from the screenshot image directly (not from the Markdown file). |
+|  | - Use Tesseract OCR to detect and extract text from the screenshot image. |
+|  | - The PDF shows the same picture as the original screenshot image. |
+|  | - Extracted OCR text is compared against the Markdown content created from web scraping. |
+|  | - If OCR text matches the MD content (key fields: order ID, total, items), mark the invoice as verified. |
+
+## 14. Image-PDF Comparison Testing — Quality Verification
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | tests |
+| **Interface** | N/A (test only) |
+| **Dependencies** | opencv-python, Pillow, fpdf2, pytesseract |
+| **Requirements** | - Convert the generated PDF back to an image. |
+|  | - Compare the PDF-rendered image against the original screenshot at quarter resolution. |
+|  | - Similarity must be ≥99% (structural similarity or pixel-level comparison). |
+|  | - Test validates that the PDF faithfully reproduces the original screenshot. |
+|  | - Test extracts text from the PDF-image via OCR and verifies it matches the MD file content. |
+
+---
+
 ## Traceability Matrix
 
 | Req # | Feature | Depends On |
@@ -132,3 +198,8 @@
 | 7 | Automotive Category | 5 |
 | 8 | Local Part Database | 5 |
 | 9 | PNG to PDF with Copyable Text | 3 |
+| 10 | Code Refactoring | 1–9 |
+| 11 | Receipt Screenshot Matching | 3, 13 |
+| 12 | 2017 Order Price Extraction | 3, 13 |
+| 13 | OCR-Based PDF Creation | 3 |
+| 14 | Image-PDF Comparison Testing | 13 |

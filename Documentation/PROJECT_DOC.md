@@ -1,6 +1,6 @@
 # Project Documentation — AliExpress-SteuerGrabber
 
-**Last updated:** 2026-03-12
+**Last updated:** 2026-03-13
 
 ## 1. Project Overview
 
@@ -22,15 +22,26 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 
 | Module / File | Responsibility |
 |---|---|
-| `grabber.py` | Main entry point — orchestrates login, parallel scraping, receipt extraction, PDF/MD generation, categorization, Octopart search, and export |
-| `tests/test_grabber.py` | Unit tests — EUR conversion, date parsing, categorization, automotive category, part number extraction, order parsing, PDF/MD generation, PNG→PDF conversion, part lookup, component report (85 tests) |
+| `grabber.py` | Thin main entry point (181 lines) — orchestrates login, parallel scraping, and report generation |
+| `utils/config.py` | Constants, paths, URLs, keywords, PART_DATABASE, PART_NUMBER_PATTERNS, TESSERACT_CMD |
+| `utils/exchange.py` | ECB rate fetching and USD→EUR conversion |
+| `utils/categorizer.py` | Order classification (Electronics/Automotive/Other), part extraction, part lookup |
+| `utils/firefox.py` | Firefox profile detection and cookie extraction |
+| `utils/scraper.py` | Order list scraping, API interception, date/price parsing |
+| `utils/receipt.py` | Tax-ui receipt data extraction via browser JS |
+| `utils/pdf_generator.py` | PDF generation, OCR text/price extraction, image-PDF comparison |
+| `utils/md_generator.py` | Per-order Markdown invoice generation |
+| `utils/reports.py` | Summary tables, CSV export, yearly summaries, Octopart report |
+| `utils/downloader.py` | Invoice download, order enrichment, parallel batch processing |
+| `tests/test_grabber.py` | Unit tests — 85 tests for core logic (categorization, parsing, generation) |
+| `tests/test_ocr_pdf.py` | OCR and image-PDF comparison tests — 15 tests |
 
 ## 4. Configuration
 
 | Item | Description |
 |---|---|
 | `.env` | Optional — AliExpress email/password for reference |
-| `requirements.txt` | Python dependencies: playwright, python-dotenv, requests, tabulate, fpdf2, Pillow, pytest |
+| `requirements.txt` | Python dependencies: playwright, python-dotenv, requests, tabulate, fpdf2, Pillow, pytest, pytesseract, opencv-python |
 | `ecb_rates_cache.json` | Cached ECB exchange rates (auto-refreshed every 24h) |
 | `MAX_WORKERS` | Number of parallel browser instances (default: 2, headed mode) |
 
@@ -63,11 +74,13 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 - Currency detection assumes USD; orders in other currencies may need manual adjustment.
 - Octopart API requires Nexar OAuth2 authentication; a curated local PART_DATABASE (~80 entries) is used instead of live API queries.
 - Headed mode (`headless=False`) is required for reliable receipt extraction; headless mode breaks the tax-ui page.
+- Tesseract OCR must be installed separately (`winget install UB-Mannheim.TesseractOCR` on Windows). OCR text quality depends on screenshot resolution and font rendering.
 
 ## 8. Revision History
 
 | Date | Summary |
 |---|---|
+| 2026-03-13 | Refactor to multi-module architecture (max 500 LOC/file), OCR pipeline, image-PDF comparison |
 | 2026-03-12 | Automotive category, local part database, copyable-text fallback PDFs, direct receipt URL |
 | 2026-03-12 | Automotive exclusion, part number extraction, PNG→PDF conversion, direct receipt URL |
 | 2026-03-09 | Add complete documentation framework, tests, and requirements |

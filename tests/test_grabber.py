@@ -13,22 +13,18 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from grabber import (
-    categorize_order,
-    convert_png_to_pdf,
-    extract_part_numbers,
-    generate_invoice_md,
-    generate_invoice_pdf,
+from utils.categorizer import categorize_order, extract_part_numbers, lookup_part
+from utils.config import octopart_search_url
+from utils.exchange import usd_to_eur_rounded_up
+from utils.md_generator import generate_invoice_md
+from utils.pdf_generator import convert_png_to_pdf, generate_invoice_pdf
+from utils.reports import (
     generate_octopart_report,
     generate_order_summary,
     generate_run_report,
     generate_yearly_summary,
-    lookup_part,
-    octopart_search_url,
-    parse_aliexpress_date,
-    parse_raw_order,
-    usd_to_eur_rounded_up,
 )
+from utils.scraper import parse_aliexpress_date, parse_raw_order
 
 
 # ---------------------------------------------------------------------------
@@ -502,7 +498,7 @@ class TestGenerateRunReport:
     """Test run report generation."""
 
     def test_creates_report_with_status(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("grabber.SCRIPT_DIR", tmp_path)
+        monkeypatch.setattr("utils.reports.SCRIPT_DIR", tmp_path)
         orders = [
             {"order_id": "111", "date": "2025-01-13", "items": ["Widget"], "total_usd": 5.0, "category": "Other"},
             {"order_id": "222", "date": "2025-02-10", "items": ["Gadget"], "total_usd": 10.0, "category": "Electronics"},
