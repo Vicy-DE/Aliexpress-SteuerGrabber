@@ -22,16 +22,16 @@ from utils.pdf_generator import (
     generate_invoice_pdf,
     ocr_extract_price,
 )
-from utils.receipt import extract_receipt_data
+from utils.receipt import download_receipt_image, extract_receipt_data
 from utils.scraper import parse_aliexpress_date
 
 
 def download_invoice_from_detail_page(page, order, ecb_rates):
-    """Extract receipt data and generate PDF + MD.
+    """Download the official receipt image and generate PDF + MD.
 
-    The page must already be on the order detail page.
-    Uses the tax-ui page to extract structured data, then generates
-    a PDF with copyable text and a companion Markdown invoice file.
+    Primary method: clicks the Download button on the tax-ui page to
+    get the official OrderSummary PNG, then converts it to PDF.
+    Fallback: takes a screenshot of the detail page if download fails.
 
     Args:
         page: Playwright page object.
@@ -57,40 +57,50 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
         print(f"  Invoice {filename_base}.pdf already exists, skipping.")
         return pdf_path
 
-    # Extract receipt data from the tax-ui page
-    receipt_data = extract_receipt_data(page, order_id)
+    # Primary: download the official receipt image via the Download button
+    downloaded = download_receipt_image(page, order_id, png_path)
 
+    if downloaded and png_path.exists():
+        # Extract receipt data from the same page (already navigated)
+        receipt_data = extract_receipt_data(page, order_id)
+
+        # Convert downloaded PNG to PDF
+        convert_png_to_pdf(png_path, pdf_path, order=order)
+        print(f"  Downloaded receipt image: {filename_base}.png")
+
+        # Generate MD from receipt data
+        generate_invoice_md(receipt_data, order, md_path, ecb_rates)
+        print(f"  Generated MD invoice:  {filename_base}.md")
+        return pdf_path
+
+    # Fallback: extract receipt data and take a screenshot
+    receipt_data = extract_receipt_data(page, order_id)
     if receipt_data:
-        # Take a screenshot of the receipt page for the image-based PDF
         try:
             page.screenshot(path=str(png_path), full_page=True)
         except Exception:
             pass
 
-        # Generate PDF from the screenshot image (primary)
         if png_path.exists():
             convert_png_to_pdf(png_path, pdf_path, order=order)
         else:
-            # Fallback: text-only PDF
             generate_invoice_pdf(receipt_data, pdf_path)
 
-        print(f"  Generated PDF invoice: {filename_base}.pdf")
+        print(f"  Generated PDF invoice (screenshot): {filename_base}.pdf")
         generate_invoice_md(receipt_data, order, md_path, ecb_rates)
         print(f"  Generated MD invoice:  {filename_base}.md")
         return pdf_path
 
-    # Fallback: screenshot of the detail page
+    # Last resort: screenshot of the detail page
     if png_path.exists():
         converted = convert_png_to_pdf(png_path, pdf_path, order=order)
         if converted:
-            # Try OCR price extraction for old orders
             if order.get("total_usd", 0) == 0:
                 ocr_price = ocr_extract_price(png_path)
                 if ocr_price > 0:
                     order["total_usd"] = ocr_price
             print(f"  Converted existing screenshot to PDF: {filename_base}.pdf")
             return pdf_path
-        print(f"  Screenshot {filename_base}.png already exists, skipping.")
         return png_path
 
     try:
@@ -100,7 +110,6 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
         time.sleep(3)
         page.screenshot(path=str(png_path), full_page=True)
 
-        # Try OCR price extraction for old orders missing price
         if order.get("total_usd", 0) == 0:
             ocr_price = ocr_extract_price(png_path)
             if ocr_price > 0:

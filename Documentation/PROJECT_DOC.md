@@ -11,7 +11,7 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 1. **Login** — Extracts session cookies from the user's running Firefox browser (copies `cookies.sqlite` to avoid lock conflicts).
 2. **Order Scraping** — Injects cookies into Playwright Firefox. Scrapes order list from DOM with automatic pagination via "View orders" button.
 3. **Parallel Processing** — Splits orders across 2 headed browser instances (`MAX_WORKERS=2`). Each worker navigates to order detail pages and extracts receipt data.
-4. **Receipt Extraction** — Navigates directly to the tax-ui URL (`https://www.aliexpress.com/p/tax-ui/index.html?isGrayMatch=true&orderId={order_id}`) and scrapes order ID, items, prices, VAT, shipping address via CSS selectors. Falls back to screenshot + PNG→PDF conversion with a copyable text page (order details) followed by the screenshot image if extraction fails.
+4. **Receipt Download** — Navigates to the tax-ui URL (`https://www.aliexpress.com/p/tax-ui/index.html?isGrayMatch=true&orderId={order_id}`). Clicks the built-in "Download" button via JavaScript interception (captures the `data:image/png;base64` anchor URL) to get the official receipt PNG. Extracts structured receipt data (order ID, items, prices, VAT, shipping address) via CSS selectors from the same page. Falls back to screenshot + PNG→PDF conversion for old orders (2017–2018) where the tax-ui page has no receipt content.
 5. **PDF & MD Generation** — Generates PDF invoices with copyable text (fpdf2) and companion Markdown files. Organized into year-based subfolders: `invoices/<year>/<date>-<order_id>.pdf`.
 6. **Exchange Rate** — Fetches ECB historical USD/EUR daily rates (cached for 24h). Uses the rate for the order date (or nearest previous business day). Rounds up to next cent.
 7. **Categorization** — Three categories: **Electronics**, **Automotive**, **Other**. Checks automotive keywords first (motorcycle, OBD, HEX V2, carburetor, diagnostic, etc.) — items matching automotive keywords are classified as "Automotive" regardless of electronics keywords. Remaining items are matched against electronics keywords using word-boundary regex.
@@ -28,7 +28,7 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 | `utils/categorizer.py` | Order classification (Electronics/Automotive/Other), part extraction, part lookup |
 | `utils/firefox.py` | Firefox profile detection and cookie extraction |
 | `utils/scraper.py` | Order list scraping, API interception, date/price parsing |
-| `utils/receipt.py` | Tax-ui receipt data extraction via browser JS |
+| `utils/receipt.py` | Tax-ui receipt image download (Download button via JS interception) and data extraction |
 | `utils/pdf_generator.py` | PDF generation, OCR text/price extraction, image-PDF comparison |
 | `utils/md_generator.py` | Per-order Markdown invoice generation |
 | `utils/reports.py` | Summary tables, CSV export, yearly summaries, Octopart report |
@@ -80,6 +80,7 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 
 | Date | Summary |
 |---|---|
+| 2026-03-13 | Switch from screenshots to official Download button for receipt images; JS interception for data URL capture |
 | 2026-03-13 | Refactor to multi-module architecture (max 500 LOC/file), OCR pipeline, image-PDF comparison |
 | 2026-03-12 | Automotive category, local part database, copyable-text fallback PDFs, direct receipt URL |
 | 2026-03-12 | Automotive exclusion, part number extraction, PNG→PDF conversion, direct receipt URL |

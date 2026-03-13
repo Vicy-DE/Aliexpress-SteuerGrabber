@@ -1,3 +1,25 @@
+## [2026-03-13] Switch invoice download from screenshots to official AliExpress Download button
+
+### What was changed
+- `utils/receipt.py` — Added `base64` import; added `_navigate_to_tax_ui()` shared navigation helper; rewrote `download_receipt_image()` to use JavaScript interception of anchor data URLs instead of Playwright `expect_download()` (which times out in Firefox for `data:` URLs); updated `extract_receipt_data()` to skip re-navigation when already on the correct tax-ui page.
+- `utils/downloader.py` — Updated import to include `download_receipt_image` from `utils.receipt`; rewrote `download_invoice_from_detail_page()` to use `download_receipt_image()` as the primary download mechanism (clicks AliExpress's Download button via JS interception), with screenshot fallback for old orders lacking the button.
+
+### Why it was changed
+- User identified that reference images in `orginal/` are **downloaded** receipt PNGs (from AliExpress's built-in Download button), not browser screenshots. The script was taking full-page screenshots instead, which included browser chrome and had different dimensions.
+- `page.expect_download()` timed out in Firefox for `data:image/png;base64` URLs (30s timeout per order, adding ~30s overhead to every modern order). JavaScript interception of the anchor element's `href` attribute captures the data URL directly, saving both time and providing the correct receipt format.
+
+### What it does / expected behaviour
+- 681 orders (2019–2026) download the official receipt PNG via the AliExpress Download button.
+- 395 orders (2017–2018) fall back to the screenshot path because the tax-ui page has no receipt content for very old orders.
+- All 1076 orders produce PNG + PDF + MD files (3228 files total).
+- All 1076 PDFs contain image content (no text-only fallbacks).
+- Downloaded receipt images match the same format as reference images in `orginal/` (clean receipt content, 93–98% white background, no browser chrome).
+- Processing speed: ~7–10s per modern order (vs ~42s previously due to download timeout).
+- All 100 tests pass.
+
+### Verified
+- Run: OK (1076 orders, 3228 files, 0 errors)
+
 ## [2026-03-12] Refactor to multi-module architecture, add OCR pipeline and image-PDF comparison testing
 
 ### What was changed
