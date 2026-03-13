@@ -1,6 +1,6 @@
 # Project Documentation — AliExpress-SteuerGrabber
 
-**Last updated:** 2026-03-13
+**Last updated:** 2026-03-13 (v2)
 
 ## 1. Project Overview
 
@@ -12,7 +12,7 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 2. **Order Scraping** — Injects cookies into Playwright Firefox. Scrapes order list from DOM with automatic pagination via "View orders" button.
 3. **Parallel Processing** — Splits orders across 2 headed browser instances (`MAX_WORKERS=2`). Each worker navigates to order detail pages and extracts receipt data.
 4. **Receipt Download** — Navigates to the tax-ui URL (`https://www.aliexpress.com/p/tax-ui/index.html?isGrayMatch=true&orderId={order_id}`). Clicks the built-in "Download" button via JavaScript interception (captures the `data:image/png;base64` anchor URL) to get the official receipt PNG. Extracts structured receipt data (order ID, items, prices, VAT, shipping address) via CSS selectors from the same page. Falls back to screenshot + PNG→PDF conversion for old orders (2017–2018) where the tax-ui page has no receipt content.
-5. **PDF & MD Generation** — Generates PDF invoices with copyable text (fpdf2) and companion Markdown files. Organized into year-based subfolders: `invoices/<year>/<date>-<order_id>.pdf`.
+5. **PDF & MD Generation** — Generates branded PDF invoices (orange AliExpress header, EUR conversion, product image thumbnails, Octopart component identification for electronics) and polished companion Markdown files (table-based layout, blockquote address/payment, Octopart search links). Organized into order-based subfolders: `invoices/<year>/<order_id>/<date>-<order_id>.{pdf,md,png}` with a `resources/` subfolder for raw captured data (detail page screenshot, receipt HTML, product images).
 6. **Exchange Rate** — Fetches ECB historical USD/EUR daily rates (cached for 24h). Uses the rate for the order date (or nearest previous business day). Rounds up to next cent.
 7. **Categorization** — Three categories: **Electronics**, **Automotive**, **Other**. Checks automotive keywords first (motorcycle, OBD, HEX V2, carburetor, diagnostic, etc.) — items matching automotive keywords are classified as "Automotive" regardless of electronics keywords. Remaining items are matched against electronics keywords using word-boundary regex.
 8. **Component Identification** — Extracts electronic part numbers (ESP32, STM32, ATmega, 1N4007, etc.) from item titles using 40+ regex patterns. Looks up identified parts in a local **PART_DATABASE** (~80 curated entries) to show manufacturer and description in MD invoice files and a consolidated report.
@@ -29,10 +29,10 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 | `utils/firefox.py` | Firefox profile detection and cookie extraction |
 | `utils/scraper.py` | Order list scraping, API interception, date/price parsing |
 | `utils/receipt.py` | Tax-ui receipt image download (Download button via JS interception) and data extraction |
-| `utils/pdf_generator.py` | PDF generation, OCR text/price extraction, image-PDF comparison |
-| `utils/md_generator.py` | Per-order Markdown invoice generation |
+| `utils/pdf_generator.py` | Branded PDF generation (AliExpress header, EUR prices, product images, Octopart), OCR text/price extraction, image-PDF comparison |
+| `utils/md_generator.py` | Per-order polished Markdown invoice generation (tables, EUR conversion, Octopart links) |
 | `utils/reports.py` | Summary tables, CSV export, yearly summaries, Octopart report |
-| `utils/downloader.py` | Invoice download, order enrichment, parallel batch processing |
+| `utils/downloader.py` | Invoice download, order enrichment, parallel batch processing, product image download, resources capture |
 | `tests/test_grabber.py` | Unit tests — 85 tests for core logic (categorization, parsing, generation) |
 | `tests/test_ocr_pdf.py` | OCR and image-PDF comparison tests — 15 tests |
 
@@ -49,8 +49,10 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 
 | Path | Description |
 |---|---|
-| `invoices/<year>/<date>-<order_id>.pdf` | Individual PDF invoices with copyable text |
-| `invoices/<year>/<date>-<order_id>.md` | Companion Markdown invoices with component identification (manufacturer + description from local database, for electronics) |
+| `invoices/<year>/<order_id>/<date>-<order_id>.pdf` | Branded PDF invoices with AliExpress header, EUR prices, product images, Octopart (for electronics) |
+| `invoices/<year>/<order_id>/<date>-<order_id>.md` | Polished Markdown invoices with tables, EUR conversion, Octopart links |
+| `invoices/<year>/<order_id>/<date>-<order_id>.png` | Downloaded receipt PNG image |
+| `invoices/<year>/<order_id>/resources/` | Raw captured data: `detail_page.png`, `receipt_page.html`, `product_N.{jpg,png}` |
 | `analysis/<year>_summary.md` | Yearly summary with totals by category |
 | `analysis/electronics/` | Copies of electronics order invoices |
 | `analysis/octopart_search.md` | Consolidated part identification with extracted part numbers, manufacturers, and descriptions from local database |
@@ -80,6 +82,7 @@ Download all AliExpress invoice PDFs and generate a categorized summary table wi
 
 | Date | Summary |
 |---|---|
+| 2026-03-13 | Branded PDF, order subfolders, EUR prices, Octopart, product images, polished MD |
 | 2026-03-13 | Switch from screenshots to official Download button for receipt images; JS interception for data URL capture |
 | 2026-03-13 | Refactor to multi-module architecture (max 500 LOC/file), OCR pipeline, image-PDF comparison |
 | 2026-03-12 | Automotive category, local part database, copyable-text fallback PDFs, direct receipt URL |

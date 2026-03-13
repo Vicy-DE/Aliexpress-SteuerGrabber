@@ -40,7 +40,8 @@ def _safe(text):
 # Screenshot → PDF  (image-based, with optional OCR verification)
 # -------------------------------------------------------------------
 
-def convert_png_to_pdf(png_path, pdf_path, order=None):
+def convert_png_to_pdf(png_path, pdf_path, order=None, ecb_rates=None,
+                        product_images=None, receipt_data=None):
     """Convert a PNG screenshot to a PDF embedding the original image.
 
     The PDF shows the same picture as the original screenshot.
@@ -51,6 +52,9 @@ def convert_png_to_pdf(png_path, pdf_path, order=None):
         png_path: Path to the source PNG file.
         pdf_path: Path where the resulting PDF will be saved.
         order: Optional order dict with items, total_usd, date, order_id.
+        ecb_rates: Optional ECB exchange rate dict for EUR conversion.
+        product_images: Optional list of product image file paths.
+        receipt_data: Optional dict with structured receipt data.
 
     Returns:
         Path to the created PDF, or None on failure.
@@ -65,7 +69,11 @@ def convert_png_to_pdf(png_path, pdf_path, order=None):
 
         # Page 1 (optional): text invoice from order data
         if order:
-            _add_text_page(pdf, order)
+            _add_text_page(
+                pdf, order, ecb_rates=ecb_rates,
+                product_images=product_images,
+                receipt_data=receipt_data,
+            )
 
         # Image page: embed the original screenshot
         page_w = 190
@@ -82,23 +90,31 @@ def convert_png_to_pdf(png_path, pdf_path, order=None):
         return None
 
 
-def _add_text_page(pdf, order):
-    """Add a text-based invoice page to the PDF from order data.
+def _add_text_page(pdf, order, ecb_rates=None, product_images=None,
+                   receipt_data=None):
+    """Add a branded invoice page to the PDF with EUR and Octopart info.
 
     Args:
         pdf: FPDF instance.
         order: Order dict.
+        ecb_rates: Optional ECB exchange rate dict.
+        product_images: Optional list of product image file paths.
+        receipt_data: Optional dict with structured receipt data.
     """
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(
-        0, 10, "AliExpress Order Invoice (from order data)",
-        new_x="LMARGIN", new_y="NEXT", align="C",
-    )
-    pdf.ln(6)
+    # AliExpress branded header
+    pdf.set_fill_color(232, 65, 24)
+    pdf.rect(10, 10, 190, 16, "F")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_xy(15, 11)
+    pdf.cell(0, 14, "AliExpress  Order Invoice", align="L")
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_y(30)
 
+    # Order metadata
     pdf.set_font("Helvetica", "", 10)
     for label, key in [("Order ID:", "order_id"),
                        ("Date:", "date"),
@@ -108,31 +124,145 @@ def _add_text_page(pdf, order):
             0, 6, str(order.get(key, "Other" if key == "category" else "")),
             new_x="LMARGIN", new_y="NEXT",
         )
-    pdf.ln(4)
 
-    items = order.get("items", [])
-    if items:
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 7, "Items", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 9)
-        for i, title in enumerate(items, 1):
-            text = _safe(title[:80])
-            pdf.cell(0, 5, f"  {i}. {text}", new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(4)
-
+    # Price with EUR conversion
     total = order.get("total_usd", 0)
     if total:
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(40, 7, "Total (USD):", new_x="RIGHT")
         pdf.cell(0, 7, f"${total:.2f}", new_x="LMARGIN", new_y="NEXT")
+        if ecb_rates and order.get("date"):
+            from utils.exchange import usd_to_eur_rounded_up
+            eur, rate, rate_date = usd_to_eur_rounded_up(
+                total, order["date"], ecb_rates
+            )
+            pdf.cell(40, 7, "Total (EUR):", new_x="RIGHT")
+            pdf.cell(
+                0, 7,
+                _safe(f"EUR {eur:.2f}  (rate {rate:.4f} on {rate_date})"),
+                new_x="LMARGIN", new_y="NEXT",
+            )
+    pdf.ln(4)
 
-    pdf.ln(6)
+    # Items table
+    items = receipt_data.get("items", []) if receipt_data else []
+    if items:
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 7, "Items", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(110, 6, "Product", border=1)
+        pdf.cell(25, 6, "Qty", border=1, align="C")
+        pdf.cell(40, 6, "Price", border=1, align="R")
+        pdf.ln()
+        pdf.set_font("Helvetica", "", 9)
+        for item in items:
+            title = item.get("title", "")
+            if len(title) > 65:
+                title = title[:62] + "..."
+            pdf.cell(110, 6, _safe(title), border=1)
+            pdf.cell(
+                25, 6, str(item.get("quantity", "1")),
+                border=1, align="C",
+            )
+            pdf.cell(
+                40, 6, _safe(item.get("price", "")),
+                border=1, align="R",
+            )
+            pdf.ln()
+    elif order.get("items"):
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 7, "Items", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 9)
+        for idx, title in enumerate(order["items"], 1):
+            text = _safe(title[:80])
+            pdf.cell(
+                0, 5, f"  {idx}. {text}",
+                new_x="LMARGIN", new_y="NEXT",
+            )
+    pdf.ln(4)
+
+    # Product images
+    if product_images:
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 7, "Product Images", new_x="LMARGIN", new_y="NEXT")
+        x_start = pdf.get_x()
+        y_start = pdf.get_y()
+        x_pos = x_start
+        for img_path in product_images[:4]:
+            if Path(str(img_path)).exists():
+                try:
+                    pdf.image(str(img_path), x=x_pos, y=y_start, w=35, h=35)
+                    x_pos += 40
+                except Exception:
+                    pass
+        if x_pos > x_start:
+            pdf.set_y(y_start + 40)
+        pdf.ln(2)
+
+    # Octopart component identification (electronics only)
+    if order.get("category") == "Electronics":
+        _add_octopart_section(pdf, order, receipt_data)
+
+    pdf.ln(4)
     pdf.set_font("Helvetica", "I", 8)
     pdf.cell(
         0, 5,
-        "Note: Receipt data unavailable. See screenshot on next page.",
+        "Official receipt image on next page.",
         new_x="LMARGIN", new_y="NEXT",
     )
+
+
+def _add_octopart_section(pdf, order, receipt_data):
+    """Add Octopart component identification section to the PDF.
+
+    Args:
+        pdf: FPDF instance.
+        order: Order dict.
+        receipt_data: Optional dict with structured receipt data.
+    """
+    from utils.categorizer import extract_part_numbers, lookup_part
+    from utils.config import octopart_search_url
+
+    item_titles = []
+    if receipt_data and receipt_data.get("items"):
+        item_titles = [
+            i.get("title", "") for i in receipt_data["items"]
+            if i.get("title")
+        ]
+    elif order.get("items"):
+        item_titles = order["items"]
+    if not item_titles:
+        return
+
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(
+        0, 7, "Component Identification (Octopart)",
+        new_x="LMARGIN", new_y="NEXT",
+    )
+    pdf.set_font("Helvetica", "", 8)
+    for title in item_titles:
+        parts = extract_part_numbers(title)
+        if parts:
+            for pn in parts:
+                info = lookup_part(pn)
+                if info:
+                    text = (
+                        f"{pn} - {info['manufacturer']}"
+                        f" - {info['description']}"
+                    )
+                else:
+                    text = f"{pn} - Search: {octopart_search_url(pn)}"
+                pdf.cell(
+                    0, 5, _safe(text),
+                    new_x="LMARGIN", new_y="NEXT",
+                )
+        else:
+            short = title[:55] if len(title) > 55 else title
+            pdf.cell(
+                0, 5, _safe(f"{short} -- no matching part"),
+                new_x="LMARGIN", new_y="NEXT",
+            )
+    pdf.ln(2)
 
 
 # -------------------------------------------------------------------

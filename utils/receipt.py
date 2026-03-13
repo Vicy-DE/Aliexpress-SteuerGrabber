@@ -166,11 +166,13 @@ _RECEIPT_EXTRACTION_JS = """() => {
         const titleEl = product.querySelector('[class*="product-title"]');
         const priceEl = product.querySelector('[class*="product-price"]');
         const skuEl   = product.querySelector('[class*="product-sku"]');
+        const imgEl   = product.querySelector('img');
         result.items.push({
             title:    titleEl ? titleEl.textContent.trim() : '',
             price:    priceEl ? priceEl.textContent.trim() : '',
             sku:      skuEl   ? skuEl.textContent.trim()   : '',
             quantity: '1',
+            imageUrl: imgEl   ? imgEl.src                  : '',
         });
     });
 

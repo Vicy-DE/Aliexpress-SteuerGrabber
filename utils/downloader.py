@@ -9,6 +9,7 @@ import logging
 import re
 import time
 
+import requests
 from playwright.sync_api import sync_playwright
 
 from utils.categorizer import categorize_order
@@ -24,6 +25,36 @@ from utils.pdf_generator import (
 )
 from utils.receipt import download_receipt_image, extract_receipt_data
 from utils.scraper import parse_aliexpress_date
+
+
+def _download_product_images(image_urls, resources_dir):
+    """Download product images to the resources directory.
+
+    Args:
+        image_urls: List of image URL strings.
+        resources_dir: Path to the resources directory.
+
+    Returns:
+        List of Paths to successfully downloaded images.
+    """
+    downloaded = []
+    for i, url in enumerate(image_urls[:5], 1):
+        if not url or url.startswith("data:"):
+            continue
+        ext = ".png" if ".png" in url.lower().split("?")[0] else ".jpg"
+        save_path = resources_dir / f"product_{i}{ext}"
+        try:
+            resp = requests.get(
+                url, timeout=10,
+                headers={"User-Agent": "Mozilla/5.0"},
+            )
+            if resp.status_code == 200 and len(resp.content) > 1000:
+                with open(str(save_path), "wb") as f:
+                    f.write(resp.content)
+                downloaded.append(save_path)
+        except Exception:
+            pass
+    return downloaded
 
 
 def download_invoice_from_detail_page(page, order, ecb_rates):
@@ -45,27 +76,52 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
     date_str = order.get("date", "unknown")
     year = date_str[:4] if len(date_str) >= 4 else "unknown"
 
-    year_dir = INVOICES_DIR / year
-    year_dir.mkdir(parents=True, exist_ok=True)
+    order_dir = INVOICES_DIR / year / order_id
+    order_dir.mkdir(parents=True, exist_ok=True)
+    resources_dir = order_dir / "resources"
+    resources_dir.mkdir(exist_ok=True)
 
     filename_base = f"{date_str}-{order_id}"
-    pdf_path = year_dir / f"{filename_base}.pdf"
-    md_path = year_dir / f"{filename_base}.md"
-    png_path = year_dir / f"{filename_base}.png"
+    pdf_path = order_dir / f"{filename_base}.pdf"
+    md_path = order_dir / f"{filename_base}.md"
+    png_path = order_dir / f"{filename_base}.png"
 
     if pdf_path.exists():
         print(f"  Invoice {filename_base}.pdf already exists, skipping.")
         return pdf_path
 
+    # Save detail page screenshot as raw data in resources/
+    try:
+        page.screenshot(
+            path=str(resources_dir / "detail_page.png"), full_page=True
+        )
+    except Exception:
+        pass
+
+    # Download product images to resources/
+    product_images = _download_product_images(
+        order.get("product_image_urls", []), resources_dir
+    )
+
     # Primary: download the official receipt image via the Download button
     downloaded = download_receipt_image(page, order_id, png_path)
 
     if downloaded and png_path.exists():
-        # Extract receipt data from the same page (already navigated)
         receipt_data = extract_receipt_data(page, order_id)
 
-        # Convert downloaded PNG to PDF
-        convert_png_to_pdf(png_path, pdf_path, order=order)
+        # Save receipt page HTML as raw data
+        try:
+            html = page.content()
+            (resources_dir / "receipt_page.html").write_text(
+                html, encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+        convert_png_to_pdf(
+            png_path, pdf_path, order=order, ecb_rates=ecb_rates,
+            product_images=product_images, receipt_data=receipt_data,
+        )
         print(f"  Downloaded receipt image: {filename_base}.png")
 
         # Generate MD from receipt data
@@ -82,7 +138,10 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
             pass
 
         if png_path.exists():
-            convert_png_to_pdf(png_path, pdf_path, order=order)
+            convert_png_to_pdf(
+                png_path, pdf_path, order=order, ecb_rates=ecb_rates,
+                product_images=product_images, receipt_data=receipt_data,
+            )
         else:
             generate_invoice_pdf(receipt_data, pdf_path)
 
@@ -93,7 +152,10 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
 
     # Last resort: screenshot of the detail page
     if png_path.exists():
-        converted = convert_png_to_pdf(png_path, pdf_path, order=order)
+        converted = convert_png_to_pdf(
+            png_path, pdf_path, order=order, ecb_rates=ecb_rates,
+            product_images=product_images,
+        )
         if converted:
             if order.get("total_usd", 0) == 0:
                 ocr_price = ocr_extract_price(png_path)
@@ -115,7 +177,10 @@ def download_invoice_from_detail_page(page, order, ecb_rates):
             if ocr_price > 0:
                 order["total_usd"] = ocr_price
 
-        convert_png_to_pdf(png_path, pdf_path, order=order)
+        convert_png_to_pdf(
+            png_path, pdf_path, order=order, ecb_rates=ecb_rates,
+            product_images=product_images,
+        )
         generate_invoice_md(None, order, md_path, ecb_rates)
         print(f"  Saved screenshot+PDF for order {order_id}")
         return pdf_path
@@ -145,6 +210,20 @@ def enrich_and_download(page, order, ecb_rates):
     time.sleep(3)
 
     # Enrich missing fields from the detail page
+    # Extract product image URLs from detail page
+    order["product_image_urls"] = page.evaluate("""() => {
+        const imgs = [];
+        document.querySelectorAll(
+            '[class*="order-item"] img, '
+            + '[class*="product-img"] img, '
+            + '[class*="item-pic"] img'
+        ).forEach(el => {
+            if (el.src && !el.src.startsWith('data:'))
+                imgs.push(el.src);
+        });
+        return imgs;
+    }""") or []
+
     if not order["total_usd"] or not order["items"] or not order["date"]:
         detail = page.evaluate("""() => {
             const result = {items: [], total_text: '', date: ''};

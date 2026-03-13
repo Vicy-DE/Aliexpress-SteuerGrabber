@@ -175,13 +175,16 @@ def main():
     for year_dir in INVOICES_DIR.iterdir():
         if not year_dir.is_dir():
             continue
-        for png_file in year_dir.glob("*.png"):
-            pdf_file = png_file.with_suffix(".pdf")
-            if not pdf_file.exists():
-                file_key = png_file.stem
-                matched_order = order_by_file.get(file_key)
-                if convert_png_to_pdf(png_file, pdf_file, order=matched_order):
-                    png_converted += 1
+        for order_dir in year_dir.iterdir():
+            if not order_dir.is_dir():
+                continue
+            for png_file in order_dir.glob("*.png"):
+                pdf_file = png_file.with_suffix(".pdf")
+                if not pdf_file.exists():
+                    file_key = png_file.stem
+                    matched_order = order_by_file.get(file_key)
+                    if convert_png_to_pdf(png_file, pdf_file, order=matched_order):
+                        png_converted += 1
     print(f"  Converted {png_converted} PNG files to PDF.")
 
     # Generate yearly summaries

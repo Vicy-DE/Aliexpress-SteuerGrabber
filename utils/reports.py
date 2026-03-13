@@ -248,7 +248,7 @@ def copy_electronics_invoices(orders, electronics_dir):
         date_str = order.get("date", "unknown")
         year = date_str[:4] if len(date_str) >= 4 else "unknown"
         filename_base = f"{date_str}-{order['order_id']}"
-        source_dir = INVOICES_DIR / year
+        source_dir = INVOICES_DIR / year / order["order_id"]
 
         for ext in [".pdf", ".md", ".png"]:
             src = source_dir / f"{filename_base}{ext}"

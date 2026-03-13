@@ -6,6 +6,7 @@ identification for electronics orders.
 """
 
 from utils.categorizer import extract_part_numbers, lookup_part
+from utils.config import octopart_search_url
 from utils.exchange import usd_to_eur_rounded_up
 
 
@@ -27,64 +28,75 @@ def generate_invoice_md(receipt_data, order, md_path, ecb_rates):
     lines = [
         f"# Invoice — Order {order['order_id']}",
         "",
-        f"**Date:** {order['date']}",
-        f"**Order ID:** {order['order_id']}",
-        f"**Category:** {order.get('category', 'Other')}",
+        "---",
+        "",
+        "| Field | Value |",
+        "|-------|-------|",
+        f"| **Date** | {order['date']} |",
+        f"| **Order ID** | `{order['order_id']}` |",
+        f"| **Category** | {order.get('category', 'Other')} |",
+        "",
+        "---",
         "",
         "## Items",
         "",
-        "| Product | Qty | Price |",
-        "|---------|-----|-------|",
+        "| # | Product | Qty | Price |",
+        "|---|---------|-----|-------|",
     ]
 
     items = receipt_data.get("items", []) if receipt_data else []
     if items:
-        for item in items:
+        for idx, item in enumerate(items, 1):
             title = item.get("title", "N/A").replace("|", "/")
             qty = item.get("quantity", "1")
             price = item.get("price", "")
-            lines.append(f"| {title} | {qty} | {price} |")
+            lines.append(f"| {idx} | {title} | {qty} | {price} |")
     else:
-        for title in order.get("items", []):
-            lines.append(f"| {title.replace('|', '/')} | 1 | — |")
+        for idx, title in enumerate(order.get("items", []), 1):
+            lines.append(f"| {idx} | {title.replace('|', '/')} | 1 | — |")
 
-    lines += ["", "## Financial Summary", ""]
+    lines += ["", "---", "", "## Financial Summary", ""]
 
     if receipt_data:
+        lines.append("| Item | Amount |")
+        lines.append("|------|--------|")
         for label, key in [
             ("Subtotal", "subtotal"), ("Discount", "discount"),
             ("Shipping", "shipping"), ("VAT", "vat"), ("Total", "total"),
         ]:
             val = receipt_data.get(key, "")
             if val:
-                lines.append(f"- **{label}:** {val}")
+                lines.append(f"| {label} | {val} |")
     else:
         lines.append(f"- **Total (USD):** ${order['total_usd']:.2f}")
 
     lines += [
         "",
-        "## EUR Conversion",
+        "### EUR Conversion",
         "",
-        f"- **Price (EUR):** €{eur_amount:.2f}",
-        f"- **Exchange Rate:** {rate:.4f} USD/EUR (date: {rate_date})",
+        "| | |",
+        "|---|---|",
+        f"| **Amount (EUR)** | EUR {eur_amount:.2f} |",
+        f"| **Exchange Rate** | {rate:.4f} USD/EUR |",
+        f"| **Rate Date** | {rate_date} |",
         "",
     ]
 
     if receipt_data:
         address = receipt_data.get("address_lines", [])
         if address:
-            lines += ["## Shipping Address", ""]
+            lines += ["---", "", "## Shipping Address", ""]
             for line in address:
                 if line.strip():
-                    lines.append(line.strip())
+                    lines.append(f"> {line.strip()}")
             lines.append("")
 
         payment = receipt_data.get("payment_method", "")
         if payment:
-            lines += ["## Payment Method", ""]
+            lines += ["---", "", "## Payment Method", ""]
             for line in payment.split("\n"):
                 if line.strip():
-                    lines.append(line.strip())
+                    lines.append(f"> {line.strip()}")
             lines.append("")
 
     # Component identification for electronics orders
@@ -98,23 +110,35 @@ def generate_invoice_md(receipt_data, order, md_path, ecb_rates):
         elif order.get("items"):
             item_titles = order["items"]
         if item_titles:
-            lines += ["## Component Identification", ""]
+            lines += [
+                "---", "",
+                "## Component Identification", "",
+                "| Part | Info | Octopart |",
+                "|------|------|----------|",
+            ]
             for title in item_titles:
                 parts = extract_part_numbers(title)
                 if parts:
-                    info_parts = []
                     for pn in parts:
                         info = lookup_part(pn)
                         if info:
-                            info_parts.append(
-                                f"**{pn}** ({info['manufacturer']}"
-                                f" — {info['description']})"
+                            info_str = (
+                                f"{info['manufacturer']}"
+                                f" — {info['description']}"
                             )
                         else:
-                            info_parts.append(f"**{pn}**")
-                    lines.append(f"- {'; '.join(info_parts)} — {title}")
+                            info_str = "*(not in local DB)*"
+                        url = octopart_search_url(pn)
+                        lines.append(
+                            f"| **{pn}** | {info_str}"
+                            f" | [Search]({url}) |"
+                        )
                 else:
-                    lines.append(f"- {title}")
+                    short = title[:50].replace("|", "/")
+                    lines.append(
+                        f"| — | {short} | *No matching part* |"
+                    )
             lines.append("")
 
+    lines += ["", "*Generated by AliExpress Invoice Grabber*", ""]
     md_path.write_text("\n".join(lines), encoding="utf-8")

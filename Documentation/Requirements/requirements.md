@@ -183,6 +183,21 @@
 |  | - Test validates that the PDF faithfully reproduces the original screenshot. |
 |  | - Test extracts text from the PDF-image via OCR and verifies it matches the MD file content. |
 
+## 15. Branded PDF with Order Subfolders — Invoice Enhancement
+
+| Item | Detail |
+|---|---|
+| **Module / Component** | downloader / pdf_generator / md_generator / reports / grabber |
+| **Interface** | Browser automation / File I/O / HTTP (product images) |
+| **Dependencies** | playwright, fpdf2, requests, Pillow |
+| **Requirements** | - Restructure output to `invoices/<year>/<order_id>/` subfolders (one folder per order). |
+|  | - Create `resources/` subfolder inside each order folder containing raw captured data: `detail_page.png` (detail page screenshot), `receipt_page.html` (tax-ui page HTML), and `product_N.{jpg,png}` (downloaded product images). |
+|  | - Add EUR price with daily ECB exchange rate to the PDF text page (Total USD + Total EUR with rate and date). |
+|  | - Add Octopart component identification to every electronics invoice PDF and MD: lookup in local PART_DATABASE; show manufacturer + description for known parts, Octopart search URL for unknown parts, "no matching part" for items without part numbers. |
+|  | - Add product images to the PDF: extract image URLs from the detail page DOM, download up to 5 images via HTTP to resources/, embed up to 4 thumbnails (35×35px) on the PDF text page. |
+|  | - Add AliExpress branded header to the PDF: orange banner (RGB 232,65,24) with white "AliExpress Order Invoice" text. |
+|  | - Polish the Markdown format: table-based layout for metadata/items/financial summary, blockquote shipping/payment, EUR conversion table, Component Identification table with Octopart search links, dividers between sections, footer text. |
+
 ---
 
 ## Traceability Matrix
@@ -203,3 +218,4 @@
 | 12 | 2017 Order Price Extraction | 3, 13 |
 | 13 | OCR-Based PDF Creation | 3 |
 | 14 | Image-PDF Comparison Testing | 13 |
+| 15 | Branded PDF with Order Subfolders | 3, 4, 5, 8 |

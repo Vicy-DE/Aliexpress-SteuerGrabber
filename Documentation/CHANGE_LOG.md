@@ -1,3 +1,27 @@
+## [2026-03-13] Branded PDF, order subfolders, EUR prices, Octopart, product images, polished MD
+
+### What was changed
+- `utils/receipt.py` — Added `imageUrl` extraction to `_RECEIPT_EXTRACTION_JS` product items (captures product thumbnail URLs from tax-ui page).
+- `utils/downloader.py` — Added `import requests` and `_download_product_images()` function; restructured output to `invoices/<year>/<order_id>/` subfolders; creates `resources/` subfolder with `detail_page.png` (order detail screenshot), `receipt_page.html` (tax-ui source), and `product_N.{jpg,png}` (product images downloaded via HTTP); added separate JS call to extract product image URLs from detail page DOM; updated all `convert_png_to_pdf()` calls with `ecb_rates`, `product_images`, and `receipt_data` params.
+- `utils/pdf_generator.py` — Expanded `convert_png_to_pdf()` signature with `ecb_rates`, `product_images`, `receipt_data`; rewrote `_add_text_page()` with AliExpress branded orange header (RGB 232,65,24), EUR conversion section, items table from receipt data, product image thumbnails (up to 4 at 35×35px), and Octopart component identification for electronics; added `_add_octopart_section()` function showing part numbers with local DB info or Octopart search URLs.
+- `utils/md_generator.py` — Added `from utils.config import octopart_search_url` import; complete format polish with table-based metadata/items/financial summary, blockquote shipping/payment, EUR conversion table, numbered items column, Component Identification table with Octopart search links, dividers between sections, and footer text.
+- `utils/reports.py` — Updated `copy_electronics_invoices` source path for new `invoices/<year>/<order_id>/` folder structure.
+- `grabber.py` — Updated PNG-to-PDF conversion loop for three-level directory structure (`year_dir → order_dir → png_file`).
+
+### Why it was changed
+User requested six enhancements: (1) Octopart results on electronics invoices, (2) EUR price with daily ECB rate on PDF, (3) product pictures and AliExpress logo on PDF, (4) order subfolders in invoices, (5) resources subfolder for raw captured data, (6) polished Markdown format.
+
+### What it does / expected behaviour
+- Output structure: `invoices/<year>/<order_id>/<date-order_id>.{png,pdf,md}` + `resources/` subfolder.
+- Resources folder contains: `detail_page.png`, `receipt_page.html`, `product_N.{jpg,png}`.
+- PDF text page has branded orange "AliExpress Order Invoice" header, USD + EUR prices with exchange rate, items table, product image thumbnails, Octopart section for electronics.
+- MD files use table-based layout with dividers, blockquote address/payment, EUR conversion table, Octopart search links for electronics.
+- 1074/1074 orders processed, 0 failed, 1074 PDFs + 1074 MDs + 1074 detail screenshots + 681 receipt HTMLs + 17 product images.
+- 100 tests pass.
+
+### Verified
+- Run: OK (1074 orders, 0 failures)
+
 ## [2026-03-13] Switch invoice download from screenshots to official AliExpress Download button
 
 ### What was changed
